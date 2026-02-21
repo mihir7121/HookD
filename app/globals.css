@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-body: 'Crimson Pro', serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #08080a;
+  color: #999;
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Noise grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #08080a; }
+::-webkit-scrollbar-thumb { background: #252530; border-radius: 2px; }
+
+/* Utility classes */
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+.font-body { font-family: var(--font-body); }
+
+/* Glow effects */
+.glow-accent {
+  box-shadow: 0 0 20px rgba(200, 255, 0, 0.2), 0 0 60px rgba(200, 255, 0, 0.05);
+}
+.glow-red {
+  box-shadow: 0 0 20px rgba(255, 64, 96, 0.3), 0 0 60px rgba(255, 64, 96, 0.1);
+}
+.glow-purple {
+  box-shadow: 0 0 20px rgba(155, 89, 255, 0.3), 0 0 60px rgba(155, 89, 255, 0.1);
+}
+
+/* Scanline effect for retro-dark vibe */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+}
+
+/* Custom range input for audio */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  background: #252530;
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #c8ff00;
+  cursor: pointer;
+}
+
+/* Animations */
+@keyframes pulse-accent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes streak-flash {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+.animate-reveal { animation: reveal 0.5s ease forwards; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-streak { animation: streak-flash 0.8s ease forwards; }
+.animate-pulse-accent { animation: pulse-accent 2s ease-in-out infinite; }
+
+/* Blur reveal animation for Artist Silhouette game */
+@keyframes unblur {
+  from { filter: blur(40px) brightness(0.3); }
+  to { filter: blur(0px) brightness(1); }
+}
+
+.blur-reveal {
+  animation: unblur 1.5s ease forwards;
+}
