@@ -23,8 +23,8 @@ const crimsonPro = Crimson_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "EARWORM — Music Trivia",
-  description: "Three Spotify-powered music games. How well do you know your ears?",
+  title: "HOOKD — Music Trivia",
+  description: "Five Spotify-powered music games. How well do you know your taste?",
 };
 
 export default function RootLayout({

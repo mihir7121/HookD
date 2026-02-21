@@ -187,7 +187,7 @@ export default function BlindGame() {
 
     (window as any).onSpotifyWebPlaybackSDKReady = () => {
       const player = new (window as any).Spotify.Player({
-        name: "Earworm Blind Taste Test",
+        name: "HookD Blind Taste Test",
         getOAuthToken: (cb: (token: string) => void) => cb(accessToken),
         volume: 0.8,
       });

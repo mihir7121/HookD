@@ -43,6 +43,10 @@ export const getNewReleases = async (accessToken: string, limit = 20) => {
 export const getArtistTopTracks = async (artistId: string, accessToken: string) =>
   spotifyFetch(`/artists/${artistId}/top-tracks?market=from_token`, accessToken);
 
+/** Related artists for a given artist */
+export const getRelatedArtists = async (artistId: string, accessToken: string) =>
+  spotifyFetch(`/artists/${artistId}/related-artists`, accessToken);
+
 /** Albums released by a given artist (albums + singles, user's market) */
 export const getArtistAlbums = async (
   artistId: string,
