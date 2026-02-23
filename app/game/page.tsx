@@ -238,6 +238,15 @@ export default function GameLobby() {
 
             <div className="w-px h-6 bg-border" />
 
+            <button
+              onClick={() => router.push("/discover")}
+              className="font-mono text-[11px] text-textdim hover:text-[#00cfff] tracking-[0.2em] uppercase transition-colors"
+            >
+              Discover ↗
+            </button>
+
+            <div className="w-px h-6 bg-border" />
+
             {/* User */}
             <div className="flex items-center gap-3">
               {user?.image && (
