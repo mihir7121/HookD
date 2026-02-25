@@ -6,52 +6,8 @@ import { useGameStore } from "@/lib/store";
 
 const games = [
   {
-    id: "album",
-    num: "01",
-    title: "Cover ID",
-    subtitle: "Album Art Recognition",
-    desc: "An album cover flashes on screen. Type the album name before time runs out. Faster answers = more points.",
-    colorHex: "#c8ff00",
-    points: "100–500 pts",
-    difficulty: "MEDIUM",
-    premium: false,
-  },
-  {
-    id: "snippet",
-    num: "02",
-    title: "Sound Check",
-    subtitle: "Song Snippet Guessing",
-    desc: "A 30-second clip from one of your top tracks plays. Identify the song title and artist. Streak multipliers apply.",
-    colorHex: "#ff4060",
-    points: "150–600 pts",
-    difficulty: "HARD",
-    premium: false,
-  },
-  {
-    id: "artist",
-    num: "03",
-    title: "Who's That?",
-    subtitle: "Artist Silhouette",
-    desc: "An artist photo is heavily blurred and reveals itself over 10 seconds. The faster you guess, the more you score.",
-    colorHex: "#9b59ff",
-    points: "200–800 pts",
-    difficulty: "HARD",
-    premium: false,
-  },
-  {
-    id: "match",
-    num: "04",
-    title: "Match Up",
-    subtitle: "Song-Artist Pairing",
-    desc: "Five songs, five artists — all shuffled. Pair every song to its artist before the clock hits zero. Speed earns bonus points.",
-    colorHex: "#00cfff",
-    points: "40–200 pts",
-    difficulty: "EASY",
-    premium: false,
-  },
-  {
     id: "blind",
-    num: "05",
+    num: "01",
     title: "Blind Taste Test",
     subtitle: "Anonymous Clip Challenge",
     desc: "A 10-second clip from your own library plays — no hints. Guess the artist and whether it's a top-10 track. It humbles everyone.",
@@ -62,7 +18,7 @@ const games = [
   },
   {
     id: "discover",
-    num: "06",
+    num: "02",
     title: "Discover",
     subtitle: "Playlist Discovery Hub",
     desc: "Community-curated playlists for any mood. Trending, new, and filtered by vibe — all in one feed.",
@@ -74,10 +30,6 @@ const games = [
 ];
 
 interface PersonalBests {
-  album: number | null;
-  snippet: number | null;
-  artist: number | null;
-  match: number | null;
   blind: number | null;
   discover: number | null;
 }
@@ -87,10 +39,6 @@ export default function GameLobby() {
   const router = useRouter();
   const { score, streak, resetScore } = useGameStore();
   const [bests, setBests] = useState<PersonalBests>({
-    album: null,
-    snippet: null,
-    artist: null,
-    match: null,
     blind: null,
     discover: null,
   });
@@ -107,19 +55,10 @@ export default function GameLobby() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    const gameTypes = ["album", "snippet", "artist", "match", "blind"] as const;
-    Promise.all(
-      gameTypes.map((gt) =>
-        fetch(`/api/leaderboard?gameType=${gt}`)
-          .then((r) => r.json())
-          .then((data) => ({ gt, score: data.myEntry?.score ?? null }))
-          .catch(() => ({ gt, score: null }))
-      )
-    ).then((results) => {
-      const next: PersonalBests = { album: null, snippet: null, artist: null, match: null, blind: null, discover: null };
-      for (const { gt, score } of results) next[gt] = score;
-      setBests(next);
-    });
+    fetch(`/api/leaderboard?gameType=blind`)
+      .then((r) => r.json())
+      .then((data) => setBests((prev) => ({ ...prev, blind: data.myEntry?.score ?? null })))
+      .catch(() => {});
   }, [status]);
 
   if (status === "loading") {
@@ -172,10 +111,6 @@ export default function GameLobby() {
         .fu3 { animation: fadeUp 0.7s 0.2s ease forwards; opacity: 0; }
         .card-in-1 { animation: cardIn 0.6s 0.2s ease forwards; opacity: 0; }
         .card-in-2 { animation: cardIn 0.6s 0.3s ease forwards; opacity: 0; }
-        .card-in-3 { animation: cardIn 0.6s 0.4s ease forwards; opacity: 0; }
-        .card-in-4 { animation: cardIn 0.6s 0.5s ease forwards; opacity: 0; }
-        .card-in-5 { animation: cardIn 0.6s 0.6s ease forwards; opacity: 0; }
-        .card-in-6 { animation: cardIn 0.6s 0.7s ease forwards; opacity: 0; }
       `}</style>
 
       <main className="min-h-screen flex flex-col relative bg-bg overflow-x-hidden">
@@ -304,9 +239,9 @@ export default function GameLobby() {
             </p>
           </div>
 
-          {/* Game cards — top 3 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
-            {games.slice(0, 3).map((g, i) => (
+          {/* Game cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto w-full">
+            {games.map((g, i) => (
               <GameCard
                 key={g.id}
                 game={g}
@@ -315,21 +250,6 @@ export default function GameLobby() {
                 onHover={(id) => setHoveredGame(id)}
                 onClick={() => handleCardClick(g.id)}
                 animClass={`card-in-${i + 1}`}
-              />
-            ))}
-          </div>
-
-          {/* Bottom 3 cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {games.slice(3).map((g, i) => (
-              <GameCard
-                key={g.id}
-                game={g}
-                personalBest={bests[g.id as keyof PersonalBests]}
-                hovered={hoveredGame === g.id}
-                onHover={(id) => setHoveredGame(id)}
-                onClick={() => handleCardClick(g.id)}
-                animClass={`card-in-${i + 4}`}
               />
             ))}
           </div>
@@ -447,7 +367,7 @@ function GameCard({
           className="font-mono text-[10px] tracking-[0.3em] mb-3 transition-opacity duration-300"
           style={{ color: hex, opacity: hovered ? 0.8 : 0.4 }}
         >
-          {game.num} / 06
+          {game.num} / 02
         </span>
 
         <h3

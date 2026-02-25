@@ -9,7 +9,7 @@ import ScorePopup from "@/components/ScorePopup";
 
 const COLOR = "#f472b6";
 const TOTAL_ROUNDS = 6;
-const ROUND_TIME = 25; // 10s clip + 15s to answer
+const ROUND_TIME = 15; // 10s clip + 5s to answer
 const CLIP_LENGTH_MS = 10_000;
 const CLIP_START_MS = 30_000; // hit the chorus
 const PTS_SONG_MAX = 250;
@@ -465,7 +465,7 @@ export default function BlindGame() {
               className="font-body italic text-sm leading-relaxed"
               style={{ color: "rgba(255,255,255,0.4)" }}
             >
-              A 10-second clip from your own library plays — no hints. Guess the
+              A 15-second clip from your own library plays — no hints. Guess the
               song and artist before time runs out.
             </p>
           </div>
@@ -619,7 +619,7 @@ export default function BlindGame() {
   const songOk = songGuess === current.name;
   const artistOk = artistGuess === current.artistName;
   const top10Ok = top10Guess === current.isTop10;
-  const urgent = timeLeft <= 8 && !submitted;
+  const urgent = timeLeft <= 5 && !submitted;
 
   return (
     <GameLayout
