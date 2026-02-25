@@ -54,11 +54,22 @@ const games = [
     num: "05",
     title: "Blind Taste Test",
     subtitle: "Anonymous Clip Challenge",
-    desc: "A 10-second clip from your own library plays — no hints. Guess the artist, the era, and whether it's a top-10 track. It humbles everyone.",
+    desc: "A 10-second clip from your own library plays — no hints. Guess the artist and whether it's a top-10 track. It humbles everyone.",
     colorHex: "#f472b6",
-    points: "50–350 pts",
+    points: "50–450 pts",
     difficulty: "BRUTAL",
     premium: true,
+  },
+  {
+    id: "discover",
+    num: "06",
+    title: "Discover",
+    subtitle: "Playlist Discovery Hub",
+    desc: "Community-curated playlists for any mood. Trending, new, and filtered by vibe — all in one feed.",
+    colorHex: "#00cfff",
+    points: "Community",
+    difficulty: "EXPLORE",
+    premium: false,
   },
 ];
 
@@ -68,6 +79,7 @@ interface PersonalBests {
   artist: number | null;
   match: number | null;
   blind: number | null;
+  discover: number | null;
 }
 
 export default function GameLobby() {
@@ -80,6 +92,7 @@ export default function GameLobby() {
     artist: null,
     match: null,
     blind: null,
+    discover: null,
   });
   const [hoveredGame, setHoveredGame] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -103,7 +116,7 @@ export default function GameLobby() {
           .catch(() => ({ gt, score: null }))
       )
     ).then((results) => {
-      const next: PersonalBests = { album: null, snippet: null, artist: null, match: null, blind: null };
+      const next: PersonalBests = { album: null, snippet: null, artist: null, match: null, blind: null, discover: null };
       for (const { gt, score } of results) next[gt] = score;
       setBests(next);
     });
@@ -120,6 +133,14 @@ export default function GameLobby() {
   }
 
   const user = session?.user;
+
+  const handleCardClick = (id: string) => {
+    if (id === "discover") {
+      router.push("/discover");
+    } else {
+      router.push(`/game/${id}`);
+    }
+  };
 
   return (
     <>
@@ -154,13 +175,13 @@ export default function GameLobby() {
         .card-in-3 { animation: cardIn 0.6s 0.4s ease forwards; opacity: 0; }
         .card-in-4 { animation: cardIn 0.6s 0.5s ease forwards; opacity: 0; }
         .card-in-5 { animation: cardIn 0.6s 0.6s ease forwards; opacity: 0; }
+        .card-in-6 { animation: cardIn 0.6s 0.7s ease forwards; opacity: 0; }
       `}</style>
 
       <main className="min-h-screen flex flex-col relative bg-bg overflow-x-hidden">
 
         {/* Ambient concert spotlights */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-          {/* Top-left lime spot */}
           <div
             className="absolute w-[600px] h-[800px] rounded-full opacity-[0.04]"
             style={{
@@ -170,7 +191,6 @@ export default function GameLobby() {
               animation: "drift1 18s ease-in-out infinite",
             }}
           />
-          {/* Top-right pink spot */}
           <div
             className="absolute w-[500px] h-[700px] rounded-full opacity-[0.04]"
             style={{
@@ -180,7 +200,6 @@ export default function GameLobby() {
               animation: "drift2 22s ease-in-out infinite",
             }}
           />
-          {/* Centre-bottom purple spot */}
           <div
             className="absolute w-[700px] h-[500px] rounded-full opacity-[0.025]"
             style={{
@@ -238,26 +257,24 @@ export default function GameLobby() {
 
             <div className="w-px h-6 bg-border" />
 
-            <button
-              onClick={() => router.push("/discover")}
-              className="font-mono text-[11px] text-textdim hover:text-[#00cfff] tracking-[0.2em] uppercase transition-colors"
-            >
-              Discover ↗
-            </button>
-
-            <div className="w-px h-6 bg-border" />
-
             {/* User */}
             <div className="flex items-center gap-3">
               {user?.image && (
-                <img
-                  src={user.image}
-                  alt={user.name || ""}
-                  className="w-7 h-7 rounded-full grayscale opacity-60"
-                />
+                <button onClick={() => router.push("/profile")}>
+                  <img
+                    src={user.image}
+                    alt={user.name || ""}
+                    className="w-7 h-7 rounded-full grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all"
+                  />
+                </button>
               )}
               <div className="hidden md:flex flex-col">
-                <span className="font-mono text-[11px] text-textmid leading-tight">{user?.name}</span>
+                <button
+                  onClick={() => router.push("/profile")}
+                  className="font-mono text-[11px] text-textmid leading-tight hover:text-accent transition-colors text-left"
+                >
+                  {user?.name}
+                </button>
                 <button
                   onClick={() => signOut({ callbackUrl: "/" })}
                   className="font-mono text-[10px] text-textdim hover:text-accent2 text-left transition-colors"
@@ -296,14 +313,14 @@ export default function GameLobby() {
                 personalBest={bests[g.id as keyof PersonalBests]}
                 hovered={hoveredGame === g.id}
                 onHover={(id) => setHoveredGame(id)}
-                onClick={() => router.push(`/game/${g.id}`)}
+                onClick={() => handleCardClick(g.id)}
                 animClass={`card-in-${i + 1}`}
               />
             ))}
           </div>
 
-          {/* Bottom 2 cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Bottom 3 cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {games.slice(3).map((g, i) => (
               <GameCard
                 key={g.id}
@@ -311,7 +328,7 @@ export default function GameLobby() {
                 personalBest={bests[g.id as keyof PersonalBests]}
                 hovered={hoveredGame === g.id}
                 onHover={(id) => setHoveredGame(id)}
-                onClick={() => router.push(`/game/${g.id}`)}
+                onClick={() => handleCardClick(g.id)}
                 animClass={`card-in-${i + 4}`}
               />
             ))}
@@ -349,13 +366,14 @@ function GameCard({
   animClass,
 }: {
   game: (typeof games)[0];
-  personalBest: number | null;
+  personalBest: number | null | undefined;
   hovered: boolean;
   onHover: (id: string | null) => void;
   onClick: () => void;
   animClass: string;
 }) {
   const hex = game.colorHex;
+  const isDiscover = game.id === "discover";
 
   return (
     <button
@@ -375,7 +393,7 @@ function GameCard({
         minHeight: "300px",
       }}
     >
-      {/* Ambient glow blob in corner */}
+      {/* Ambient glow blob */}
       <div
         className="absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none transition-opacity duration-500"
         style={{
@@ -425,12 +443,11 @@ function GameCard({
 
       {/* Content */}
       <div className={`flex-1 flex flex-col ${game.premium ? "mt-8" : ""}`}>
-        {/* Small number label */}
         <span
           className="font-mono text-[10px] tracking-[0.3em] mb-3 transition-opacity duration-300"
           style={{ color: hex, opacity: hovered ? 0.8 : 0.4 }}
         >
-          {game.num} / 05
+          {game.num} / 06
         </span>
 
         <h3
@@ -459,18 +476,33 @@ function GameCard({
         className="mt-8 pt-5 flex items-end justify-between transition-colors duration-300"
         style={{ borderTop: `1px solid ${hovered ? hex + "30" : "rgba(37,37,48,0.6)"}` }}
       >
-        <div className="flex flex-col gap-0.5">
-          <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">POINTS</span>
-          <span className="font-mono text-xs" style={{ color: hex }}>{game.points}</span>
-        </div>
-        <div className="flex flex-col items-end gap-0.5">
-          <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">
-            {personalBest !== null ? "BEST" : "DIFFICULTY"}
-          </span>
-          <span className="font-mono text-xs" style={{ color: hex }}>
-            {personalBest !== null ? personalBest.toLocaleString() : game.difficulty}
-          </span>
-        </div>
+        {isDiscover ? (
+          <>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">TYPE</span>
+              <span className="font-mono text-xs" style={{ color: hex }}>COMMUNITY</span>
+            </div>
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">ACCESS</span>
+              <span className="font-mono text-xs" style={{ color: hex }}>FREE</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">POINTS</span>
+              <span className="font-mono text-xs" style={{ color: hex }}>{game.points}</span>
+            </div>
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">
+                {personalBest != null ? "BEST" : "DIFFICULTY"}
+              </span>
+              <span className="font-mono text-xs" style={{ color: hex }}>
+                {personalBest != null ? personalBest.toLocaleString() : game.difficulty}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </button>
   );
