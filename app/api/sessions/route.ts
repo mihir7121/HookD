@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     maxStreak: number;
   };
 
-  if (!["album", "snippet", "artist", "match", "blind"].includes(gameType)) {
+  if (!["blind"].includes(gameType)) {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
   }
 

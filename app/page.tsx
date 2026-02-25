@@ -5,45 +5,21 @@ import { useEffect, useState } from "react";
 
 const GAMES = [
   {
-    id: "album",
-    num: "01",
-    title: "Cover ID",
-    tagline: "You see it. Name it.",
-    desc: "An album cover appears. Identify it before the clock runs out. No clues. No mercy.",
-    color: "#c8ff00",
-  },
-  {
-    id: "snippet",
-    num: "02",
-    title: "Sound Check",
-    tagline: "A song plays. You answer.",
-    desc: "Thirty seconds of a track you've streamed dozens of times. Or think you have.",
-    color: "#ff4060",
-  },
-  {
-    id: "artist",
-    num: "03",
-    title: "Who's That?",
-    tagline: "The face beneath the blur.",
-    desc: "A blurred artist photo slowly sharpens. The faster you guess, the higher you score.",
-    color: "#9b59ff",
-  },
-  {
-    id: "match",
-    num: "04",
-    title: "Matchmaker",
-    tagline: "Connect the dots.",
-    desc: "Pair tracks to their artists. Muscle memory meets music knowledge, against the clock.",
-    color: "#00cfff",
-  },
-  {
     id: "blind",
-    num: "05",
+    num: "01",
     title: "Blind Taste Test",
     tagline: "No labels. Just sound.",
-    desc: "A full Spotify track plays — blurred, unbranded. Guess the song, the artist, the era.",
+    desc: "A 10-second clip from your own library plays — no hints. Guess the artist and whether it's a top-10 track. It humbles everyone.",
     color: "#f472b6",
     premium: true,
+  },
+  {
+    id: "discover",
+    num: "02",
+    title: "Discover",
+    tagline: "Community-curated playlists.",
+    desc: "Browse and save playlists shared by the community. Filter by mood, vote on favourites, and find your next obsession.",
+    color: "#00cfff",
   },
 ];
 
@@ -176,7 +152,7 @@ export default function Home() {
           <div className="relative z-10 flex flex-col items-center text-center px-6">
             <p className="fu1 font-mono text-[9px] md:text-[10px] tracking-[0.5em] uppercase mb-10"
               style={{ color: "rgba(255,255,255,0.22)" }}>
-              Spotify · Five Games · Your History
+              Spotify · Your Music · Your History
             </p>
 
             <h1
@@ -194,7 +170,7 @@ export default function Home() {
               className="fu3 font-body italic mt-5 max-w-xs md:max-w-sm leading-relaxed"
               style={{ fontSize: "clamp(16px, 2.5vw, 20px)", color: "rgba(255,255,255,0.38)" }}
             >
-              Five games. Your listening history. Find out what you actually know.
+              Your Spotify history. Your music knowledge. Find out what you actually know.
             </p>
 
             <div className="fu4 mt-14">
@@ -264,7 +240,7 @@ export default function Home() {
                   className="font-display leading-none text-white"
                   style={{ fontSize: "clamp(48px, 8vw, 96px)", letterSpacing: "0.06em" }}
                 >
-                  FIVE WAYS<br />TO LISTEN.
+                  TWO WAYS<br />TO LISTEN.
                 </h2>
               </div>
               <p

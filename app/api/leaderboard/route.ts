@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const gameType = searchParams.get("gameType") ?? "overall";
 
-  const VALID_TYPES = ["album", "snippet", "artist", "match", "blind", "overall"];
+  const VALID_TYPES = ["blind", "overall"];
   if (!VALID_TYPES.includes(gameType)) {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
   }
