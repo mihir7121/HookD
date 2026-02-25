@@ -336,7 +336,7 @@ export default function DiscoverPage() {
                           onClick={() => void handleVote(entry.id)}
                           className="px-3 py-2 border border-border font-mono text-xs text-textmid tracking-[0.16em]"
                         >
-                          {entry.hasVoted ? "UPVOTED" : "UPVOTE"} ({entry.upvotes})
+                          {entry.hasVoted ? "LIKED" : "LIKE"} ({entry.upvotes})
                         </button>
                         <button
                           onClick={() => void handleReport(entry.id)}

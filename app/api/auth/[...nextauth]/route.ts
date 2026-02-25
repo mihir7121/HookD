@@ -8,6 +8,7 @@ const SPOTIFY_SCOPES = [
   "user-top-read",
   "user-library-read",
   "playlist-read-private",
+  "playlist-modify-private",
   "streaming",
   "user-read-playback-state",
   "user-modify-playback-state",
