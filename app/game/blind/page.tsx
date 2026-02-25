@@ -8,22 +8,24 @@ import GameLayout from "@/components/GameLayout";
 import ScorePopup from "@/components/ScorePopup";
 
 const COLOR = "#f472b6";
+const TOTAL_ROUNDS = 6;
 const ROUND_TIME = 25; // 10s clip + 15s to answer
 const CLIP_LENGTH_MS = 10_000;
-const CLIP_START_MS = 30_000; // Start 30s into the track to hit the chorus
+const CLIP_START_MS = 30_000; // hit the chorus
 const PTS_SONG_MAX = 250;
 const PTS_SONG_MIN = 75;
 const PTS_ARTIST_MAX = 150;
 const PTS_ARTIST_MIN = 50;
-const PTS_YEAR_MAX = 100;
-const PTS_TOP10 = 50; // flat, no time scaling
+const PTS_TOP10 = 50; // flat bonus
 
-const YEAR_RANGES = [
-  { label: "Before 2015", min: 0, max: 2014 },
-  { label: "2015 – 2018", min: 2015, max: 2018 },
-  { label: "2019 – 2022", min: 2019, max: 2022 },
-  { label: "2023 or later", min: 2023, max: 9999 },
-] as const;
+type Phase =
+  | "eligibility"
+  | "not_premium"
+  | "locked"
+  | "gate"
+  | "starting"
+  | "ingame"
+  | "ended";
 
 interface BlindTrack {
   id: string;
@@ -31,25 +33,17 @@ interface BlindTrack {
   name: string;
   artistName: string;
   releaseYear: number;
-  topRank: number; // 1-indexed position in top 50
+  topRank: number;
   isTop10: boolean;
   albumImage: string;
-  songOptions: string[];   // 4 shuffled song title choices
-  artistOptions: string[]; // 4 shuffled artist choices
-}
-
-function yearBucket(year: number): string {
-  return (
-    YEAR_RANGES.find((r) => year >= r.min && year <= r.max)?.label ??
-    YEAR_RANGES[YEAR_RANGES.length - 1].label
-  );
+  songOptions: string[];
+  artistOptions: string[];
 }
 
 function hookLine(
   track: BlindTrack,
   songCorrect: boolean,
   artistCorrect: boolean,
-  yearCorrect: boolean,
   top10Correct: boolean
 ): string {
   const r = track.topRank;
@@ -62,27 +56,18 @@ function hookLine(
       ? `a top-10 track for you (#${r})`
       : `your #${r} most played track`;
 
-  if (songCorrect && artistCorrect && yearCorrect && top10Correct) {
+  if (songCorrect && artistCorrect && top10Correct)
     return `${rankStr[0].toUpperCase()}${rankStr.slice(1)}. Perfect round.`;
-  }
-  if (!songCorrect && !artistCorrect) {
+  if (!songCorrect && !artistCorrect)
     return `${rankStr[0].toUpperCase()}${rankStr.slice(1)} — and you still missed it.`;
-  }
-  if (songCorrect && !artistCorrect) {
+  if (songCorrect && !artistCorrect)
     return `You knew the song, but not who made it.`;
-  }
-  if (!songCorrect && artistCorrect && yearCorrect && top10Correct) {
+  if (!songCorrect && artistCorrect && top10Correct)
     return `You knew everything except the title. Embarrassing.`;
-  }
-  if (!songCorrect && artistCorrect) {
+  if (!songCorrect && artistCorrect)
     return `You know the artist — but not this track.`;
-  }
-  if (yearCorrect && top10Correct) {
+  if (top10Correct)
     return `${rankStr[0].toUpperCase()}${rankStr.slice(1)}. You really know your music.`;
-  }
-  if (!yearCorrect && artistCorrect) {
-    return `You knew the artist — but not when they made it.`;
-  }
   return `Artist right, but the details still got you.`;
 }
 
@@ -91,22 +76,21 @@ export default function BlindGame() {
   const router = useRouter();
   const { addPoints, endStreak, maxStreak } = useGameStore();
 
+  const [phase, setPhase] = useState<Phase>("eligibility");
+  const [attemptsRemaining, setAttemptsRemaining] = useState(3);
+
   const [tracks, setTracks] = useState<BlindTrack[]>([]);
   const [current, setCurrent] = useState<BlindTrack | null>(null);
   const [round, setRound] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [notPremium, setNotPremium] = useState(false);
 
   // Per-round answers
   const [songGuess, setSongGuess] = useState<string | null>(null);
   const [artistGuess, setArtistGuess] = useState<string | null>(null);
-  const [yearGuess, setYearGuess] = useState<string | null>(null);
   const [top10Guess, setTop10Guess] = useState<boolean | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [roundPts, setRoundPts] = useState<{
     song: number;
     artist: number;
-    year: number;
     top10: number;
   } | null>(null);
 
@@ -117,9 +101,10 @@ export default function BlindGame() {
 
   // Session-level stats
   const [popupPts, setPopupPts] = useState<number | null>(null);
-  const [totalAnswered, setTotalAnswered] = useState(0);
-  const [correct, setCorrect] = useState(0);
   const [sessionScore, setSessionScore] = useState(0);
+  const [songCorrectCount, setSongCorrectCount] = useState(0);
+  const [artistCorrectCount, setArtistCorrectCount] = useState(0);
+  const [top10CorrectCount, setTop10CorrectCount] = useState(0);
 
   const playerRef = useRef<any>(null);
   const deviceIdRef = useRef<string>("");
@@ -127,63 +112,82 @@ export default function BlindGame() {
   const savedRef = useRef(false);
   const submittedRef = useRef(false);
   const timeLeftRef = useRef(ROUND_TIME);
+  // Refs to avoid stale closures in doSave
+  const sessionScoreRef = useRef(0);
+  const artistCorrectRef = useRef(0);
+
   const accessToken = (session as any)?.accessToken as string | undefined;
 
-  // ── Load tracks + check premium ───────────────────────────────────────────────
+  // ── Eligibility check ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!accessToken) return;
     (async () => {
       try {
-        // Check premium status
-        const me = await fetch("https://api.spotify.com/v1/me", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }).then((r) => r.json());
-
-        if (me.product !== "premium") {
-          setNotPremium(true);
-          setLoading(false);
+        const res = await fetch("/api/blind/eligibility");
+        const data = await res.json();
+        if (!data.isPremium) {
+          setPhase("not_premium");
           return;
         }
-
-        const data = await getTopTracks(accessToken, 50);
-        const mapped: BlindTrack[] = data.items.map((t: any, idx: number) => ({
-          id: t.id,
-          uri: t.uri,
-          name: t.name,
-          artistName: t.artists[0].name,
-          releaseYear: parseInt(t.album.release_date?.slice(0, 4) ?? "2000"),
-          topRank: idx + 1,
-          isTop10: idx < 10,
-          albumImage: t.album.images[0]?.url ?? "",
-        }));
-
-        // Build stable MCQ options per track
-        const allArtists = Array.from(new Set(mapped.map((t) => t.artistName)));
-        const allSongs = mapped.map((t) => t.name);
-        const tracksWithOptions: BlindTrack[] = mapped.map((t) => ({
-          ...t,
-          songOptions: shuffle([
-            t.name,
-            ...shuffle(allSongs.filter((s) => s !== t.name)).slice(0, 3),
-          ]),
-          artistOptions: shuffle([
-            t.artistName,
-            ...shuffle(allArtists.filter((a) => a !== t.artistName)).slice(0, 3),
-          ]),
-        }));
-
-        setTracks(shuffle(tracksWithOptions));
-        setLoading(false);
-      } catch (e) {
-        console.error(e);
-        setLoading(false);
+        setAttemptsRemaining(data.attemptsRemaining);
+        setPhase(data.attemptsRemaining === 0 ? "locked" : "gate");
+      } catch {
+        setPhase("gate"); // best-effort fallback
       }
     })();
   }, [accessToken]);
 
-  // ── Spotify Web Playback SDK ──────────────────────────────────────────────────
-  useEffect(() => {
+  // ── Consume attempt + load tracks ────────────────────────────────────────────
+  const handleStart = async () => {
     if (!accessToken) return;
+    setPhase("starting");
+    try {
+      const res = await fetch("/api/blind/start", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setAttemptsRemaining(0);
+        setPhase("locked");
+        return;
+      }
+      setAttemptsRemaining(data.attemptsRemaining);
+
+      const trackData = await getTopTracks(accessToken, 50);
+      const mapped: BlindTrack[] = trackData.items.map((t: any, idx: number) => ({
+        id: t.id,
+        uri: t.uri,
+        name: t.name,
+        artistName: t.artists[0].name,
+        releaseYear: parseInt(t.album.release_date?.slice(0, 4) ?? "2000"),
+        topRank: idx + 1,
+        isTop10: idx < 10,
+        albumImage: t.album.images[0]?.url ?? "",
+      }));
+
+      const allArtists = Array.from(new Set(mapped.map((t) => t.artistName)));
+      const allSongs = mapped.map((t) => t.name);
+      const tracksWithOptions: BlindTrack[] = mapped.map((t) => ({
+        ...t,
+        songOptions: shuffle([
+          t.name,
+          ...shuffle(allSongs.filter((s) => s !== t.name)).slice(0, 3),
+        ]),
+        artistOptions: shuffle([
+          t.artistName,
+          ...shuffle(allArtists.filter((a) => a !== t.artistName)).slice(0, 3),
+        ]),
+      }));
+
+      setTracks(shuffle(tracksWithOptions));
+      setPhase("ingame");
+    } catch (e) {
+      console.error(e);
+      setPhase("gate");
+    }
+  };
+
+  // ── Spotify Web Playback SDK ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== "ingame" || !accessToken) return;
 
     (window as any).onSpotifyWebPlaybackSDKReady = () => {
       const player = new (window as any).Spotify.Player({
@@ -197,22 +201,18 @@ export default function BlindGame() {
         setPlayerReady(true);
       });
 
-      player.addListener("not_ready", () => {
-        setPlayerReady(false);
-      });
+      player.addListener("not_ready", () => setPlayerReady(false));
 
       player.connect();
       playerRef.current = player;
     };
 
-    // Load SDK script if not already in DOM
     if (!document.getElementById("spotify-sdk")) {
       const script = document.createElement("script");
       script.id = "spotify-sdk";
       script.src = "https://sdk.scdn.co/spotify-player.js";
       document.body.appendChild(script);
     } else if ((window as any).Spotify) {
-      // SDK already loaded (e.g. navigated back to page), fire manually
       (window as any).onSpotifyWebPlaybackSDKReady();
     }
 
@@ -223,14 +223,13 @@ export default function BlindGame() {
         setPlayerReady(false);
       }
     };
-  }, [accessToken]);
+  }, [phase, accessToken]);
 
-  // ── Setup round ───────────────────────────────────────────────────────────────
+  // ── Setup round ──────────────────────────────────────────────────────────────
   const setupRound = useCallback((trackList: BlindTrack[], roundIdx: number) => {
     setCurrent(trackList[roundIdx % trackList.length]);
     setSongGuess(null);
     setArtistGuess(null);
-    setYearGuess(null);
     setTop10Guess(null);
     submittedRef.current = false;
     setSubmitted(false);
@@ -241,12 +240,12 @@ export default function BlindGame() {
   }, []);
 
   useEffect(() => {
-    if (tracks.length > 0) setupRound(tracks, round);
-  }, [tracks, round, setupRound]);
+    if (tracks.length > 0 && phase === "ingame") setupRound(tracks, round);
+  }, [tracks, round, phase, setupRound]);
 
-  // ── Play 10s clip via SDK ─────────────────────────────────────────────────────
+  // ── Play 10s clip via SDK ────────────────────────────────────────────────────
   useEffect(() => {
-    if (!current || loading || !playerReady || !deviceIdRef.current || !accessToken) return;
+    if (phase !== "ingame" || !current || !playerReady || !deviceIdRef.current || !accessToken) return;
 
     const startDelay = setTimeout(async () => {
       if (clipTimerRef.current) clearTimeout(clipTimerRef.current);
@@ -280,7 +279,7 @@ export default function BlindGame() {
       if (clipTimerRef.current) clearTimeout(clipTimerRef.current);
       playerRef.current?.pause();
     };
-  }, [current, loading, playerReady, accessToken]);
+  }, [current, phase, playerReady, accessToken]);
 
   // Cleanup on unmount
   useEffect(
@@ -291,12 +290,11 @@ export default function BlindGame() {
     []
   );
 
-  // ── Submit answers ────────────────────────────────────────────────────────────
+  // ── Submit answers ───────────────────────────────────────────────────────────
   const doSubmit = useCallback(
     (
       sGuess: string | null,
       aGuess: string | null,
-      yGuess: string | null,
       t10Guess: boolean | null,
       time: number,
       track: BlindTrack
@@ -312,7 +310,6 @@ export default function BlindGame() {
       const tf = time / ROUND_TIME;
       const songOk = sGuess === track.name;
       const artistOk = aGuess === track.artistName;
-      const yearOk = yGuess === yearBucket(track.releaseYear);
       const top10Ok = t10Guess === track.isTop10;
 
       const songPts = songOk
@@ -321,30 +318,35 @@ export default function BlindGame() {
       const artistPts = artistOk
         ? Math.round(PTS_ARTIST_MIN + (PTS_ARTIST_MAX - PTS_ARTIST_MIN) * tf)
         : 0;
-      const yearPts = yearOk ? Math.round(PTS_YEAR_MAX * tf) : 0;
       const top10Pts = top10Ok ? PTS_TOP10 : 0;
-      const total = songPts + artistPts + yearPts + top10Pts;
+      const total = songPts + artistPts + top10Pts;
 
       if (total > 0) {
         addPoints(total);
-        setSessionScore((s) => s + total);
+        sessionScoreRef.current += total;
+        setSessionScore(sessionScoreRef.current);
         setPopupPts(total);
         setTimeout(() => setPopupPts(null), 1200);
       }
       if (!artistOk) endStreak();
 
-      setRoundPts({ song: songPts, artist: artistPts, year: yearPts, top10: top10Pts });
-      setTotalAnswered((t) => t + 1);
-      if (artistOk) setCorrect((c) => c + 1);
+      if (songOk) setSongCorrectCount((c) => c + 1);
+      if (artistOk) {
+        artistCorrectRef.current++;
+        setArtistCorrectCount(artistCorrectRef.current);
+      }
+      if (top10Ok) setTop10CorrectCount((c) => c + 1);
+
+      setRoundPts({ song: songPts, artist: artistPts, top10: top10Pts });
     },
     [addPoints, endStreak]
   );
 
-  // ── Countdown ─────────────────────────────────────────────────────────────────
+  // ── Countdown ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (loading || submitted || !current) return;
+    if (phase !== "ingame" || submitted || !current) return;
     if (timeLeft <= 0) {
-      doSubmit(songGuess, artistGuess, yearGuess, top10Guess, 0, current);
+      doSubmit(songGuess, artistGuess, top10Guess, 0, current);
       return;
     }
     const t = setTimeout(() => {
@@ -353,73 +355,260 @@ export default function BlindGame() {
       setTimeLeft(next);
     }, 1000);
     return () => clearTimeout(t);
-  }, [timeLeft, loading, submitted, current, songGuess, artistGuess, yearGuess, top10Guess, doSubmit]);
+  }, [timeLeft, phase, submitted, current, songGuess, artistGuess, top10Guess, doSubmit]);
 
-  // ── Auto-submit when all 4 answered ──────────────────────────────────────────
+  // ── Auto-submit when all 3 prompts answered ──────────────────────────────────
   useEffect(() => {
-    if (submitted || !current) return;
-    if (songGuess !== null && artistGuess !== null && yearGuess !== null && top10Guess !== null) {
-      doSubmit(songGuess, artistGuess, yearGuess, top10Guess, timeLeftRef.current, current);
+    if (submitted || !current || phase !== "ingame") return;
+    if (songGuess !== null && artistGuess !== null && top10Guess !== null) {
+      doSubmit(songGuess, artistGuess, top10Guess, timeLeftRef.current, current);
     }
-  }, [songGuess, artistGuess, yearGuess, top10Guess, submitted, current, doSubmit]);
+  }, [songGuess, artistGuess, top10Guess, submitted, current, phase, doSubmit]);
 
-  // ── Save & back ───────────────────────────────────────────────────────────────
+  // ── Save session ─────────────────────────────────────────────────────────────
+  const doSave = async () => {
+    if (savedRef.current || sessionScoreRef.current === 0) return;
+    savedRef.current = true;
+    try {
+      await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gameType: "blind",
+          score: sessionScoreRef.current,
+          roundsPlayed: TOTAL_ROUNDS,
+          correctAnswers: artistCorrectRef.current,
+          maxStreak,
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to save session:", e);
+    }
+  };
+
+  // ── Next round / end ─────────────────────────────────────────────────────────
+  const handleNext = () => {
+    const nextRound = round + 1;
+    if (nextRound >= TOTAL_ROUNDS) {
+      doSave();
+      setPhase("ended");
+    } else {
+      setRound(nextRound);
+    }
+  };
+
+  // ── Back / quit ──────────────────────────────────────────────────────────────
   const handleBack = async () => {
     playerRef.current?.pause();
-    if (!savedRef.current && sessionScore > 0) {
-      savedRef.current = true;
-      try {
-        await fetch("/api/sessions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            gameType: "blind",
-            score: sessionScore,
-            roundsPlayed: totalAnswered,
-            correctAnswers: correct,
-            maxStreak,
-          }),
-        });
-      } catch (e) {
-        console.error("Failed to save session:", e);
-      }
-    }
+    await doSave();
     router.push("/game");
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────────
-  if (loading) {
+  // ── Phase renders ─────────────────────────────────────────────────────────────
+
+  if (phase === "eligibility" || phase === "starting") {
+    const text =
+      phase === "eligibility"
+        ? "CHECKING ELIGIBILITY..."
+        : tracks.length === 0
+        ? "LOADING YOUR TRACKS..."
+        : "CONNECTING PLAYER...";
     return (
       <GameLayout title="Blind Taste Test" color={COLOR} onBack={handleBack}>
-        <LoadingState text="LOADING YOUR TRACKS..." />
+        <LoadingState text={text} />
       </GameLayout>
     );
   }
 
-  if (notPremium) {
+  if (phase === "not_premium") {
     return (
       <GameLayout title="Blind Taste Test" color={COLOR} onBack={handleBack}>
-        <div className="flex flex-col items-center justify-center py-40 px-4 text-center gap-6">
+        <StaticGate
+          icon="✦"
+          title="PREMIUM REQUIRED"
+          body="Blind Taste Test plays full Spotify tracks and requires a Spotify Premium account."
+          color={COLOR}
+        />
+      </GameLayout>
+    );
+  }
+
+  if (phase === "locked") {
+    return (
+      <GameLayout title="Blind Taste Test" color={COLOR} onBack={handleBack}>
+        <StaticGate
+          icon="⊘"
+          title="NO ATTEMPTS LEFT"
+          body="You've used all 3 runs for today. Resets at UTC midnight."
+          color={COLOR}
+        />
+      </GameLayout>
+    );
+  }
+
+  if (phase === "gate") {
+    return (
+      <GameLayout title="Blind Taste Test" color={COLOR} onBack={handleBack}>
+        <div className="flex flex-col items-center justify-center py-32 px-4 text-center gap-8 max-w-sm mx-auto">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center text-3xl"
             style={{ background: `${COLOR}15`, border: `1px solid ${COLOR}30` }}
           >
-            ✦
+            ♪
           </div>
-          <div>
-            <p className="font-display text-2xl tracking-widest mb-3" style={{ color: COLOR }}>
-              PREMIUM REQUIRED
+
+          <div className="flex flex-col gap-3">
+            <p className="font-display text-2xl tracking-widest" style={{ color: COLOR }}>
+              BLIND TASTE TEST
             </p>
-            <p className="font-body italic text-sm leading-relaxed max-w-xs mx-auto" style={{ color: "rgba(255,255,255,0.4)" }}>
-              Blind Taste Test plays full Spotify tracks and requires a Spotify Premium account.
+            <p
+              className="font-body italic text-sm leading-relaxed"
+              style={{ color: "rgba(255,255,255,0.4)" }}
+            >
+              A 10-second clip from your own library plays — no hints. Guess the
+              song and artist before time runs out.
             </p>
+          </div>
+
+          <AttemptIndicator remaining={attemptsRemaining} color={COLOR} />
+
+          <button
+            onClick={handleStart}
+            className="w-full py-4 font-mono text-xs tracking-[0.2em] rounded-2xl transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+            style={{
+              background: `linear-gradient(135deg, ${COLOR}30, ${COLOR}15)`,
+              border: `1px solid ${COLOR}60`,
+              color: COLOR,
+              boxShadow: `0 0 32px ${COLOR}20`,
+            }}
+          >
+            START RUN →
+          </button>
+
+          <p
+            className="font-mono text-[9px] tracking-[0.15em]"
+            style={{ color: "rgba(255,255,255,0.2)" }}
+          >
+            ATTEMPT IS CONSUMED ON START
+          </p>
+        </div>
+      </GameLayout>
+    );
+  }
+
+  if (phase === "ended") {
+    const songAcc = Math.round((songCorrectCount / TOTAL_ROUNDS) * 100);
+    const artistAcc = Math.round((artistCorrectCount / TOTAL_ROUNDS) * 100);
+    const top10Acc = Math.round((top10CorrectCount / TOTAL_ROUNDS) * 100);
+
+    return (
+      <GameLayout title="Blind Taste Test" color={COLOR} onBack={() => router.push("/game")}>
+        <div className="flex flex-col items-center gap-6 py-12 px-4 w-full max-w-sm mx-auto">
+          <p className="font-display text-2xl tracking-widest" style={{ color: COLOR }}>
+            RUN COMPLETE
+          </p>
+
+          {/* Total score */}
+          <div
+            className="w-full rounded-2xl p-6 text-center"
+            style={{ background: `${COLOR}0a`, border: `1px solid ${COLOR}25` }}
+          >
+            <p
+              className="font-mono text-[10px] tracking-[0.2em] mb-2"
+              style={{ color: "rgba(255,255,255,0.3)" }}
+            >
+              TOTAL SCORE
+            </p>
+            <p className="font-display text-5xl" style={{ color: COLOR }}>
+              {sessionScore.toLocaleString()}
+            </p>
+          </div>
+
+          {/* Accuracy breakdown */}
+          <div
+            className="w-full rounded-2xl overflow-hidden"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            <div
+              className="p-4 flex flex-col divide-y"
+              style={{ borderColor: "rgba(255,255,255,0.05)" }}
+            >
+              <AccuracyRow
+                label="SONG"
+                correct={songCorrectCount}
+                total={TOTAL_ROUNDS}
+                pct={songAcc}
+                color={COLOR}
+              />
+              <AccuracyRow
+                label="ARTIST"
+                correct={artistCorrectCount}
+                total={TOTAL_ROUNDS}
+                pct={artistAcc}
+                color={COLOR}
+              />
+              <AccuracyRow
+                label="TOP 10"
+                correct={top10CorrectCount}
+                total={TOTAL_ROUNDS}
+                pct={top10Acc}
+                color={COLOR}
+              />
+            </div>
+          </div>
+
+          {/* Attempts remaining */}
+          <AttemptIndicator remaining={attemptsRemaining} color={COLOR} />
+
+          {/* CTAs */}
+          <div className="w-full flex flex-col gap-3">
+            {attemptsRemaining > 0 && (
+              <button
+                onClick={() => {
+                  savedRef.current = false;
+                  sessionScoreRef.current = 0;
+                  artistCorrectRef.current = 0;
+                  setSessionScore(0);
+                  setSongCorrectCount(0);
+                  setArtistCorrectCount(0);
+                  setTop10CorrectCount(0);
+                  setRound(0);
+                  setTracks([]);
+                  setPhase("gate");
+                }}
+                className="w-full py-4 font-mono text-xs tracking-[0.2em] rounded-2xl transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+                style={{
+                  background: `linear-gradient(135deg, ${COLOR}30, ${COLOR}15)`,
+                  border: `1px solid ${COLOR}60`,
+                  color: COLOR,
+                  boxShadow: `0 0 32px ${COLOR}20`,
+                }}
+              >
+                PLAY AGAIN →
+              </button>
+            )}
+            <button
+              onClick={() => router.push("/game")}
+              className="w-full py-3.5 font-mono text-xs tracking-[0.2em] rounded-2xl transition-all duration-200"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "rgba(255,255,255,0.4)",
+              }}
+            >
+              BACK TO LOBBY
+            </button>
           </div>
         </div>
       </GameLayout>
     );
   }
 
-  if (!playerReady) {
+  // ── ingame: wait for SDK ─────────────────────────────────────────────────────
+  if (!playerReady || !current) {
     return (
       <GameLayout title="Blind Taste Test" color={COLOR} onBack={handleBack}>
         <LoadingState text="CONNECTING PLAYER..." />
@@ -427,11 +616,8 @@ export default function BlindGame() {
     );
   }
 
-  if (!current) return null;
-
   const songOk = songGuess === current.name;
   const artistOk = artistGuess === current.artistName;
-  const yearOk = yearGuess === yearBucket(current.releaseYear);
   const top10Ok = top10Guess === current.isTop10;
   const urgent = timeLeft <= 8 && !submitted;
 
@@ -440,7 +626,11 @@ export default function BlindGame() {
       title="Blind Taste Test"
       color={COLOR}
       onBack={handleBack}
-      stats={{ round: round + 1, correct, total: totalAnswered }}
+      stats={{
+        round: round + 1,
+        correct: artistCorrectCount,
+        total: round + (submitted ? 1 : 0),
+      }}
     >
       {/* ── Ambient album-art background ── */}
       <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
@@ -461,13 +651,10 @@ export default function BlindGame() {
       </div>
 
       <div className="flex flex-col items-center gap-5 py-8 w-full max-w-xl mx-auto px-4">
-
         {/* ── Hero: Album art + Timer ── */}
         <div className="flex flex-col items-center gap-5 w-full">
-
           {/* Album frame with glow halo */}
           <div className="relative">
-            {/* Glow halo — fades in while playing */}
             <div
               className="absolute -inset-6 rounded-[2rem] pointer-events-none transition-opacity duration-700"
               style={{
@@ -477,7 +664,6 @@ export default function BlindGame() {
               }}
             />
 
-            {/* Art frame */}
             <div
               className="relative w-56 h-56 rounded-2xl overflow-hidden transition-all duration-1000"
               style={{
@@ -498,7 +684,6 @@ export default function BlindGame() {
                 }`}
               />
 
-              {/* Frosted overlay while hidden */}
               {!submitted && (
                 <div
                   className="absolute inset-0 flex items-center justify-center"
@@ -517,7 +702,6 @@ export default function BlindGame() {
                 </div>
               )}
 
-              {/* Track info gradient after reveal */}
               {submitted && (
                 <div
                   className="absolute bottom-0 left-0 right-0 px-3 pt-8 pb-3"
@@ -538,6 +722,18 @@ export default function BlindGame() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Round counter pill */}
+          <div
+            className="font-mono text-[10px] tracking-[0.2em] px-3 py-1 rounded-full"
+            style={{
+              background: `${COLOR}15`,
+              border: `1px solid ${COLOR}30`,
+              color: COLOR,
+            }}
+          >
+            ROUND {round + 1} / {TOTAL_ROUNDS}
           </div>
 
           {/* Timer bar */}
@@ -609,23 +805,6 @@ export default function BlindGame() {
             </div>
           </QuestionBlock>
 
-          <QuestionBlock label="WHEN WAS THIS RELEASED?">
-            <div className="grid grid-cols-2 gap-2">
-              {YEAR_RANGES.map((r) => (
-                <ChoiceBtn
-                  key={r.label}
-                  label={r.label}
-                  chosen={yearGuess === r.label}
-                  correct={r.label === yearBucket(current.releaseYear)}
-                  submitted={submitted}
-                  disabled={submitted || yearGuess !== null}
-                  color={COLOR}
-                  onClick={() => setYearGuess(r.label)}
-                />
-              ))}
-            </div>
-          </QuestionBlock>
-
           <QuestionBlock label="IS THIS IN YOUR TOP 10 MOST PLAYED?">
             <div className="grid grid-cols-2 gap-2">
               {([{ label: "YES", val: true }, { label: "NO", val: false }] as const).map(
@@ -658,25 +837,30 @@ export default function BlindGame() {
             }}
           >
             <div className="p-5 flex flex-col gap-4">
-              {/* Score rows */}
-              <div className="flex flex-col divide-y" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                <ScoreRow label="SONG"      pts={roundPts.song}   correct={songOk}   color={COLOR} />
-                <ScoreRow label="ARTIST"    pts={roundPts.artist} correct={artistOk} color={COLOR} />
-                <ScoreRow label="YEAR"      pts={roundPts.year}   correct={yearOk}   color={COLOR} />
-                <ScoreRow label="TOP 10"    pts={roundPts.top10}  correct={top10Ok}  color={COLOR} flat />
+              <div
+                className="flex flex-col divide-y"
+                style={{ borderColor: "rgba(255,255,255,0.05)" }}
+              >
+                <ScoreRow label="SONG" pts={roundPts.song} correct={songOk} color={COLOR} />
+                <ScoreRow label="ARTIST" pts={roundPts.artist} correct={artistOk} color={COLOR} />
+                <ScoreRow
+                  label="TOP 10"
+                  pts={roundPts.top10}
+                  correct={top10Ok}
+                  color={COLOR}
+                  flat
+                />
               </div>
 
-              {/* Hook line */}
               <p
                 className="font-body italic text-sm leading-relaxed pt-1"
                 style={{ color: songOk && artistOk ? COLOR : "#ff4060" }}
               >
-                &ldquo;{hookLine(current, songOk, artistOk, yearOk, top10Ok)}&rdquo;
+                &ldquo;{hookLine(current, songOk, artistOk, top10Ok)}&rdquo;
               </p>
 
-              {/* Next button */}
               <button
-                onClick={() => setRound((r) => r + 1)}
+                onClick={handleNext}
                 className="w-full py-3.5 font-mono text-xs tracking-[0.15em] rounded-xl transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
                 style={{
                   background: `linear-gradient(135deg, ${COLOR}25, ${COLOR}10)`,
@@ -685,7 +869,7 @@ export default function BlindGame() {
                   boxShadow: `0 0 24px ${COLOR}18`,
                 }}
               >
-                NEXT CLIP →
+                {round + 1 >= TOTAL_ROUNDS ? "SEE RESULTS →" : "NEXT CLIP →"}
               </button>
             </div>
           </div>
@@ -697,7 +881,7 @@ export default function BlindGame() {
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function QuestionBlock({
   label,
@@ -822,12 +1006,105 @@ function ScoreRow({
           {label}
         </span>
       </div>
-      <span
-        className="text-xs"
-        style={{ color: correct ? color : "rgba(255,64,96,0.55)" }}
-      >
+      <span className="text-xs" style={{ color: correct ? color : "rgba(255,64,96,0.55)" }}>
         {correct ? `+${pts}${flat ? " (flat)" : ""}` : "—"}
       </span>
+    </div>
+  );
+}
+
+function AccuracyRow({
+  label,
+  correct,
+  total,
+  pct,
+  color,
+}: {
+  label: string;
+  correct: number;
+  total: number;
+  pct: number;
+  color: string;
+}) {
+  return (
+    <div className="flex items-center justify-between font-mono text-xs py-2.5">
+      <span
+        className="tracking-[0.12em] text-[10px]"
+        style={{ color: "rgba(255,255,255,0.35)" }}
+      >
+        {label}
+      </span>
+      <div className="flex items-center gap-3">
+        <span style={{ color: "rgba(255,255,255,0.4)" }}>
+          {correct}/{total}
+        </span>
+        <span style={{ color: pct >= 50 ? color : "#ff4060" }}>{pct}%</span>
+      </div>
+    </div>
+  );
+}
+
+function AttemptIndicator({ remaining, color }: { remaining: number; color: string }) {
+  return (
+    <div
+      className="w-full rounded-2xl px-6 py-4 flex flex-col gap-2"
+      style={{ background: `${color}0a`, border: `1px solid ${color}25` }}
+    >
+      <p
+        className="font-mono text-[10px] tracking-[0.2em]"
+        style={{ color: "rgba(255,255,255,0.3)" }}
+      >
+        ATTEMPTS REMAINING TODAY
+      </p>
+      <div className="flex items-center gap-2">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-2 flex-1 rounded-full transition-all duration-300"
+            style={{ background: i < remaining ? color : `${color}25` }}
+          />
+        ))}
+      </div>
+      <p className="font-mono text-sm" style={{ color }}>
+        {remaining} / 3
+      </p>
+    </div>
+  );
+}
+
+function StaticGate({
+  icon,
+  title,
+  body,
+  color,
+}: {
+  icon: string;
+  title: string;
+  body: string;
+  color: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-40 px-4 text-center gap-6">
+      <div
+        className="w-20 h-20 rounded-full flex items-center justify-center text-3xl"
+        style={{ background: `${color}15`, border: `1px solid ${color}30` }}
+      >
+        {icon}
+      </div>
+      <div>
+        <p
+          className="font-display text-2xl tracking-widest mb-3"
+          style={{ color }}
+        >
+          {title}
+        </p>
+        <p
+          className="font-body italic text-sm leading-relaxed max-w-xs mx-auto"
+          style={{ color: "rgba(255,255,255,0.4)" }}
+        >
+          {body}
+        </p>
+      </div>
     </div>
   );
 }
