@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const gameType = searchParams.get("gameType") ?? "overall";
 
-  const VALID_TYPES = ["blind", "overall"];
+  const VALID_TYPES = ["pixel", "blind", "overall"];
   if (!VALID_TYPES.includes(gameType)) {
     return NextResponse.json({ error: "Invalid gameType" }, { status: 400 });
   }

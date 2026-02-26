@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const GAME_META: Record<string, { label: string; color: string }> = {
+  pixel: { label: "Pixel Panic", color: "#c8ff00" },
   blind: { label: "Blind Taste", color: "#f472b6" },
 };
 
-const GAME_ORDER = ["blind"];
+const GAME_ORDER = ["pixel", "blind"];
 
 type RecentSession = {
   gameType: string;
