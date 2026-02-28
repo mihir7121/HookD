@@ -17,8 +17,19 @@ const games = [
     premium: false,
   },
   {
-    id: "blind",
+    id: "slide",
     num: "02",
+    title: "Cover Slide",
+    subtitle: "Tile Puzzle Challenge",
+    desc: "Slide album art tiles into place before the clock expires. Choose 3x3, 5x5, or 7x7 and race for the cleanest solve.",
+    colorHex: "#ff9f1c",
+    points: "100–3600 pts",
+    difficulty: "SCALING",
+    premium: false,
+  },
+  {
+    id: "blind",
+    num: "03",
     title: "Blind Taste Test",
     subtitle: "Anonymous Clip Challenge",
     desc: "A 10-second clip from your own library plays — no hints. Guess the artist and whether it's a top-10 track. It humbles everyone.",
@@ -29,7 +40,7 @@ const games = [
   },
   {
     id: "discover",
-    num: "03",
+    num: "04",
     title: "Discover",
     subtitle: "Playlist Discovery Hub",
     desc: "Community-curated playlists for any mood. Trending, new, and filtered by vibe — all in one feed.",
@@ -42,6 +53,7 @@ const games = [
 
 interface PersonalBests {
   pixel: number | null;
+  slide: number | null;
   blind: number | null;
   discover: number | null;
 }
@@ -52,6 +64,7 @@ export default function GameLobby() {
   const { score, streak, resetScore } = useGameStore();
   const [bests, setBests] = useState<PersonalBests>({
     pixel: null,
+    slide: null,
     blind: null,
     discover: null,
   });
@@ -70,11 +83,13 @@ export default function GameLobby() {
     if (status !== "authenticated") return;
     Promise.allSettled([
       fetch("/api/leaderboard?gameType=pixel").then((r) => r.json()),
+      fetch("/api/leaderboard?gameType=slide").then((r) => r.json()),
       fetch("/api/leaderboard?gameType=blind").then((r) => r.json()),
-    ]).then(([pixelRes, blindRes]) => {
+    ]).then(([pixelRes, slideRes, blindRes]) => {
       setBests((prev) => ({
         ...prev,
         pixel: pixelRes.status === "fulfilled" ? (pixelRes.value.myEntry?.score ?? null) : null,
+        slide: slideRes.status === "fulfilled" ? (slideRes.value.myEntry?.score ?? null) : null,
         blind: blindRes.status === "fulfilled" ? (blindRes.value.myEntry?.score ?? null) : null,
       }));
     });
@@ -131,6 +146,7 @@ export default function GameLobby() {
         .card-in-1 { animation: cardIn 0.6s 0.2s ease forwards; opacity: 0; }
         .card-in-2 { animation: cardIn 0.6s 0.3s ease forwards; opacity: 0; }
         .card-in-3 { animation: cardIn 0.6s 0.4s ease forwards; opacity: 0; }
+        .card-in-4 { animation: cardIn 0.6s 0.5s ease forwards; opacity: 0; }
       `}</style>
 
       <main className="min-h-screen flex flex-col relative bg-bg overflow-x-hidden">
@@ -260,7 +276,7 @@ export default function GameLobby() {
           </div>
 
           {/* Game cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 max-w-6xl mx-auto w-full">
             {games.map((g, i) => (
               <GameCard
                 key={g.id}
@@ -383,12 +399,12 @@ function GameCard({
 
       {/* Content */}
       <div className={`flex-1 flex flex-col ${game.premium ? "mt-8" : ""}`}>
-        <span
-          className="font-mono text-[10px] tracking-[0.3em] mb-3 transition-opacity duration-300"
-          style={{ color: hex, opacity: hovered ? 0.8 : 0.4 }}
-        >
-          {game.num} / 03
-        </span>
+            <span
+              className="font-mono text-[10px] tracking-[0.3em] mb-3 transition-opacity duration-300"
+              style={{ color: hex, opacity: hovered ? 0.8 : 0.4 }}
+            >
+              {game.num} / 04
+            </span>
 
         <h3
           className="font-display tracking-wider leading-none mb-1 transition-all duration-300"
