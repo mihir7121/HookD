@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type GameType = "overall" | "pixel" | "blind";
+type GameType = "overall" | "pixel" | "slide" | "blind";
 
 interface LeaderboardEntry {
   rank: number;
@@ -25,6 +25,7 @@ interface LeaderboardData {
 const TABS: { key: GameType; label: string; color: string }[] = [
   { key: "overall", label: "Overall", color: "#c8ff00" },
   { key: "pixel", label: "Pixel Panic", color: "#c8ff00" },
+  { key: "slide", label: "Cover Slide", color: "#ff9f1c" },
   { key: "blind", label: "Blind Taste", color: "#f472b6" },
 ];
 
