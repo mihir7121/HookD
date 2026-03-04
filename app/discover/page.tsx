@@ -189,7 +189,7 @@ export default function DiscoverPage() {
             </button>
             <div className="w-px h-4 bg-border" />
             <div>
-              <p className="font-mono text-[10px] text-textdim tracking-[0.22em]">COMMUNITY</p>
+              <p className="font-mono text-xs text-textdim tracking-[0.22em]">COMMUNITY</p>
               <h1 className="font-display text-4xl leading-none" style={{ color: activeColor }}>
                 DISCOVER
               </h1>
@@ -197,7 +197,7 @@ export default function DiscoverPage() {
           </div>
           <button
             onClick={() => router.push("/game/blind")}
-            className="font-mono text-[11px] text-textdim hover:text-accent2 tracking-[0.2em] uppercase"
+            className="font-mono text-xs text-textdim hover:text-accent2 tracking-[0.2em] uppercase"
           >
             Blind Taste ↗
           </button>
@@ -243,7 +243,7 @@ export default function DiscoverPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedMood("")}
-              className="px-3 py-1.5 border font-mono text-[10px] tracking-[0.16em] uppercase"
+              className="px-3 py-1.5 border font-mono text-xs tracking-[0.16em] uppercase"
               style={{
                 borderColor: !selectedMood ? `${activeColor}70` : "#252530",
                 color: !selectedMood ? activeColor : "#888",
@@ -255,7 +255,7 @@ export default function DiscoverPage() {
               <button
                 key={mood}
                 onClick={() => setSelectedMood(mood)}
-                className="px-3 py-1.5 border font-mono text-[10px] tracking-[0.16em] uppercase"
+                className="px-3 py-1.5 border font-mono text-xs tracking-[0.16em] uppercase"
                 style={{
                   borderColor: selectedMood === mood ? `${activeColor}70` : "#252530",
                   color: selectedMood === mood ? activeColor : "#888",
@@ -293,14 +293,14 @@ export default function DiscoverPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <h2 className="font-display text-3xl leading-none truncate">{entry.playlist.title}</h2>
-                        <span className="font-mono text-[10px] text-textdim tracking-[0.18em] uppercase">
+                        <span className="font-mono text-xs text-textdim tracking-[0.18em] uppercase">
                           {entry.playlist.trackCount} tracks
                         </span>
                       </div>
 
                       <p className="font-body italic text-sm text-textmid mb-2">"{entry.oneLiner}"</p>
 
-                      <div className="font-mono text-[11px] text-textdim mb-3">
+                      <div className="font-mono text-xs text-textdim mb-3">
                         by {entry.playlist.ownerName} · shared by {entry.submitter.name}
                       </div>
 
@@ -308,7 +308,7 @@ export default function DiscoverPage() {
                         {entry.moodTags.map((tag) => (
                           <span
                             key={tag}
-                            className="px-2 py-1 border border-border text-[10px] font-mono tracking-[0.14em] uppercase text-textdim"
+                            className="px-2 py-1 border border-border text-xs font-mono tracking-[0.14em] uppercase text-textdim"
                           >
                             {tag.replace("-", " ")}
                           </span>
@@ -356,11 +356,11 @@ export default function DiscoverPage() {
         <aside className="space-y-4">
           <div className="border border-border bg-bg2 p-4">
             <h3 className="font-display text-3xl leading-none mb-3 text-accent">Submit Playlist</h3>
-            <p className="font-mono text-[11px] text-textdim mb-4">Add a Spotify playlist with 1 to 3 moods.</p>
+            <p className="font-mono text-xs text-textdim mb-4">Add a Spotify playlist with 1 to 3 moods.</p>
 
             <form onSubmit={handleSubmitPlaylist} className="space-y-3">
               <div>
-                <label className="font-mono text-[10px] text-textdim tracking-[0.15em] uppercase">Spotify URL</label>
+                <label className="font-mono text-xs text-textdim tracking-[0.15em] uppercase">Spotify URL</label>
                 <input
                   value={urlInput}
                   onChange={(event) => setUrlInput(event.target.value)}
@@ -371,7 +371,7 @@ export default function DiscoverPage() {
               </div>
 
               <div>
-                <label className="font-mono text-[10px] text-textdim tracking-[0.15em] uppercase">One-liner (20-100 chars)</label>
+                <label className="font-mono text-xs text-textdim tracking-[0.15em] uppercase">One-liner (20-100 chars)</label>
                 <textarea
                   value={oneLinerInput}
                   onChange={(event) => setOneLinerInput(event.target.value)}
@@ -385,7 +385,7 @@ export default function DiscoverPage() {
               </div>
 
               <div>
-                <label className="font-mono text-[10px] text-textdim tracking-[0.15em] uppercase">Moods (max 3)</label>
+                <label className="font-mono text-xs text-textdim tracking-[0.15em] uppercase">Moods (max 3)</label>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {MOOD_OPTIONS.map((mood) => {
                     const selected = moodSelection.includes(mood);
@@ -394,7 +394,7 @@ export default function DiscoverPage() {
                         key={mood}
                         type="button"
                         onClick={() => toggleMoodSelection(mood)}
-                        className="px-2 py-1 border font-mono text-[10px] tracking-[0.13em] uppercase"
+                        className="px-2 py-1 border font-mono text-xs tracking-[0.13em] uppercase"
                         style={{
                           borderColor: selected ? "#c8ff00" : "#252530",
                           color: selected ? "#c8ff00" : "#888",
