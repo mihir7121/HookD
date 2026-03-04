@@ -5,8 +5,24 @@ import { useEffect, useState } from "react";
 
 const GAMES = [
   {
-    id: "blind",
+    id: "pixel",
     num: "01",
+    title: "Pixel Panic",
+    tagline: "Album Cover Challenge.",
+    desc: "An album cover from your library starts as a pixelated blur and sharpens over 12 seconds. Identify it before time runs out — speed is points.",
+    color: "#c8ff00",
+  },
+  {
+    id: "slide",
+    num: "02",
+    title: "Cover Slide",
+    tagline: "Tile Puzzle Challenge.",
+    desc: "Slide album art tiles into place before the clock expires. Choose 3×3, 5×5, or 7×7 and race for the cleanest solve.",
+    color: "#ff9f1c",
+  },
+  {
+    id: "blind",
+    num: "03",
     title: "Blind Taste Test",
     tagline: "No labels. Just sound.",
     desc: "A 10-second clip from your own library plays — no hints. Guess the artist and whether it's a top-10 track. It humbles everyone.",
@@ -15,7 +31,7 @@ const GAMES = [
   },
   {
     id: "discover",
-    num: "02",
+    num: "04",
     title: "Discover",
     tagline: "Community-curated playlists.",
     desc: "Browse and save playlists shared by the community. Filter by mood, vote on favourites, and find your next obsession.",
@@ -240,7 +256,7 @@ export default function Home() {
                   className="font-display leading-none text-white"
                   style={{ fontSize: "clamp(48px, 8vw, 96px)", letterSpacing: "0.06em" }}
                 >
-                  TWO WAYS<br />TO LISTEN.
+                  FOUR WAYS<br />TO LISTEN.
                 </h2>
               </div>
               <p

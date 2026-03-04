@@ -1,18 +1,17 @@
 # HOOKD — Music Trivia
 
-A dark, moody music trivia game powered by your Spotify listening history. Five games. Your taste on trial.
+A dark, moody music trivia game powered by your Spotify listening history. Four games. Your taste on trial.
 
 ## Games
 
-| # | Game | Description | Points |
-|---|------|-------------|--------|
-| 01 | **Cover ID** | An album cover flashes on screen. Type the album name before time runs out. Faster = more points. | 100–500 pts |
-| 02 | **Sound Check** | A 30-second clip from one of your top tracks plays. Name the song and artist. Streak multipliers apply. | 150–600 pts |
-| 03 | **Who's That?** | An artist photo is heavily blurred and reveals itself over 10 seconds. Guess before it's fully clear. | 200–800 pts |
-| 04 | **Match Up** | Five songs, five artists — all shuffled. Pair every song to its artist before the clock hits zero. | 40–200 pts |
-| 05 | **Blind Taste Test** ⭐ | A 10-second clip from your library plays — no hints. Guess the song, artist, era, and whether it's a top-10 track. | 50–350 pts |
+| # | Game | Description | Points | Difficulty |
+|---|------|-------------|--------|------------|
+| 01 | **Pixel Panic** | An album cover from your library starts as a pixelated blur and sharpens over 12 seconds. Identify it before time runs out — speed is points. | 100–500 pts | MEDIUM |
+| 02 | **Cover Slide** | Slide album art tiles into place before the clock expires. Choose 3×3, 5×5, or 7×7 and race for the cleanest solve. | 100–3600 pts | SCALING |
+| 03 | **Blind Taste Test** ⭐ | A 10-second clip from your own library plays — no hints. Guess the artist and whether it's a top-10 track. It humbles everyone. | 50–450 pts | BRUTAL |
+| 04 | **Discover** | Community-curated playlists for any mood. Trending, new, and filtered by vibe — all in one feed. | Community | EXPLORE |
 
-> ⭐ Blind Taste Test requires a **Spotify Premium** account (uses the Web Playback SDK for full-track playback).
+> ⭐ Blind Taste Test requires a **Spotify Premium** account (uses the Spotify Web Playback SDK for full-track playback). Limited to 3 attempts per day.
 
 ---
 
@@ -22,7 +21,7 @@ A dark, moody music trivia game powered by your Spotify listening history. Five 
 
 ```bash
 git clone https://github.com/mihir7121/HookD.git
-cd HookD
+cd HookD/earworm
 npm install
 ```
 
@@ -50,7 +49,7 @@ create table users (
 create table game_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references users(id) on delete cascade,
-  game_type text check (game_type in ('album', 'snippet', 'artist', 'match', 'blind')),
+  game_type text check (game_type in ('pixel', 'slide', 'blind')),
   score integer not null,
   rounds_played integer default 0,
   correct_answers integer default 0,
@@ -58,15 +57,23 @@ create table game_sessions (
   played_at timestamptz default now()
 );
 
+create table blind_daily_attempts (
+  user_id uuid references users(id) on delete cascade,
+  date_key date not null,
+  attempts_used integer not null default 0,
+  primary key (user_id, date_key)
+);
+
 alter table users enable row level security;
 alter table game_sessions enable row level security;
+alter table blind_daily_attempts enable row level security;
 ```
 
 3. Copy your **Project URL** and **Service Role Key** from Project Settings → API
 
 ### 4. Configure environment
 
-Create `.env.local` in the project root:
+Create `.env.local` in the `earworm/` directory:
 
 ```env
 SPOTIFY_CLIENT_ID=your_client_id
@@ -101,14 +108,11 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 | Game | Min | Max | Notes |
 |------|-----|-----|-------|
-| Cover ID | 100 pts | 500 pts | Time-based |
-| Sound Check | 150 pts | 600 pts | Time-based + streak multiplier |
-| Who's That? | 200 pts | 800 pts | Time-based (10s reveal window) |
-| Match Up | 40 pts | 200 pts | Speed bonus on completion |
-| Blind Taste Test | 50 pts | 350 pts | Multi-question (song, artist, era, top-10) |
-
-Points scale linearly with time remaining. Build streaks for bonus multipliers on Sound Check.
+| Pixel Panic | 100 pts | 500 pts | Time-based — faster reveal = fewer points |
+| Cover Slide | 100 pts | 3600 pts | Scales with grid size (3×3 / 5×5 / 7×7) |
+| Blind Taste Test | 50 pts | 450 pts | Per-question: song (150), artist (150), top-10 (150) |
+| Discover | — | — | Community feature, no scoring |
 
 ## Leaderboard
 
-Each game has its own leaderboard tracking each player's **personal best**. The overall leaderboard sums your best score across all five games.
+Each scored game has its own leaderboard tracking each player's **personal best**. The overall leaderboard sums your best score across all three scored games (Pixel Panic, Cover Slide, Blind Taste Test).
