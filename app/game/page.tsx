@@ -206,12 +206,12 @@ export default function GameLobby() {
             {/* Score + streak */}
             <div className="flex items-center gap-4 font-mono text-xs">
               <div className="flex flex-col items-end">
-                <span className="text-textdim tracking-[0.2em] text-[10px]">SCORE</span>
+                <span className="text-textdim tracking-[0.2em] text-xs">SCORE</span>
                 <span className="text-accent text-base leading-tight">{score.toLocaleString()}</span>
               </div>
               {streak > 1 && (
                 <div className="flex flex-col items-end">
-                  <span className="text-textdim tracking-[0.2em] text-[10px]">STREAK</span>
+                  <span className="text-textdim tracking-[0.2em] text-xs">STREAK</span>
                   <span className="text-accent2 text-base leading-tight">×{streak}</span>
                 </div>
               )}
@@ -221,7 +221,7 @@ export default function GameLobby() {
 
             <button
               onClick={() => router.push("/leaderboard")}
-              className="font-mono text-[11px] text-textdim hover:text-accent tracking-[0.2em] uppercase transition-colors"
+              className="font-mono text-xs text-textdim hover:text-accent tracking-[0.2em] uppercase transition-colors"
             >
               Leaderboard ↗
             </button>
@@ -242,13 +242,13 @@ export default function GameLobby() {
               <div className="hidden md:flex flex-col">
                 <button
                   onClick={() => router.push("/profile")}
-                  className="font-mono text-[11px] text-textmid leading-tight hover:text-accent transition-colors text-left"
+                  className="font-mono text-xs text-textmid leading-tight hover:text-accent transition-colors text-left"
                 >
                   {user?.name}
                 </button>
                 <button
                   onClick={() => signOut({ callbackUrl: "/" })}
-                  className="font-mono text-[10px] text-textdim hover:text-accent2 text-left transition-colors"
+                  className="font-mono text-xs text-textdim hover:text-accent2 text-left transition-colors"
                 >
                   Sign out
                 </button>
@@ -262,7 +262,7 @@ export default function GameLobby() {
 
           {/* Section header */}
           <div className="mb-20 text-center">
-            <div className="fu1 font-mono text-[10px] text-textdim tracking-[0.5em] uppercase mb-4">
+            <div className="fu1 font-mono text-xs text-textdim tracking-[0.5em] uppercase mb-4">
               Choose your game
             </div>
             <h1 className="fu2 font-display leading-none tracking-wider text-white"
@@ -295,7 +295,7 @@ export default function GameLobby() {
             <div className="mt-16 text-center">
               <button
                 onClick={resetScore}
-                className="font-mono text-[10px] text-textdim hover:text-accent2 tracking-[0.3em] uppercase transition-colors"
+                className="font-mono text-xs text-textdim hover:text-accent2 tracking-[0.3em] uppercase transition-colors"
               >
                 Reset score
               </button>
@@ -374,7 +374,7 @@ function GameCard({
       {/* Premium badge */}
       {game.premium && (
         <div
-          className="absolute top-6 left-8 font-mono text-[9px] tracking-[0.25em] px-2 py-0.5 border"
+          className="absolute top-6 left-8 font-mono text-xs tracking-[0.25em] px-2 py-0.5 border"
           style={{
             color: hex,
             borderColor: hex + "60",
@@ -400,7 +400,7 @@ function GameCard({
       {/* Content */}
       <div className={`flex-1 flex flex-col ${game.premium ? "mt-8" : ""}`}>
             <span
-              className="font-mono text-[10px] tracking-[0.3em] mb-3 transition-opacity duration-300"
+              className="font-mono text-xs tracking-[0.3em] mb-3 transition-opacity duration-300"
               style={{ color: hex, opacity: hovered ? 0.8 : 0.4 }}
             >
               {game.num} / 04
@@ -417,7 +417,7 @@ function GameCard({
           {game.title}
         </h3>
 
-        <p className="font-mono text-[10px] text-textdim tracking-[0.25em] uppercase mb-5">
+        <p className="font-mono text-xs text-textdim tracking-[0.25em] uppercase mb-5">
           {game.subtitle}
         </p>
 
@@ -435,22 +435,22 @@ function GameCard({
         {isDiscover ? (
           <>
             <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">TYPE</span>
+              <span className="font-mono text-xs text-textdim tracking-[0.25em]">TYPE</span>
               <span className="font-mono text-xs" style={{ color: hex }}>COMMUNITY</span>
             </div>
             <div className="flex flex-col items-end gap-0.5">
-              <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">ACCESS</span>
+              <span className="font-mono text-xs text-textdim tracking-[0.25em]">ACCESS</span>
               <span className="font-mono text-xs" style={{ color: hex }}>FREE</span>
             </div>
           </>
         ) : (
           <>
             <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">POINTS</span>
+              <span className="font-mono text-xs text-textdim tracking-[0.25em]">POINTS</span>
               <span className="font-mono text-xs" style={{ color: hex }}>{game.points}</span>
             </div>
             <div className="flex flex-col items-end gap-0.5">
-              <span className="font-mono text-[9px] text-textdim tracking-[0.25em]">
+              <span className="font-mono text-xs text-textdim tracking-[0.25em]">
                 {personalBest != null ? "BEST" : "DIFFICULTY"}
               </span>
               <span className="font-mono text-xs" style={{ color: hex }}>

@@ -65,12 +65,12 @@ export default function GameLayout({ title, color, onBack, children, stats }: Pr
           <div className="w-px h-4 bg-border hidden sm:block" />
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end">
-              <span className="text-textdim text-[10px] tracking-widest">SCORE</span>
+              <span className="text-textdim text-xs tracking-widest">SCORE</span>
               <span className="text-accent leading-tight">{score.toLocaleString()}</span>
             </div>
             {streak > 1 && (
               <div className="flex flex-col items-end">
-                <span className="text-textdim text-[10px] tracking-widest">STREAK</span>
+                <span className="text-textdim text-xs tracking-widest">STREAK</span>
                 <span className="text-accent2 leading-tight">×{streak}</span>
               </div>
             )}

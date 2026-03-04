@@ -5,8 +5,24 @@ import { useEffect, useState } from "react";
 
 const GAMES = [
   {
-    id: "blind",
+    id: "pixel",
     num: "01",
+    title: "Pixel Panic",
+    tagline: "Album Cover Challenge.",
+    desc: "An album cover from your library starts as a pixelated blur and sharpens over 12 seconds. Identify it before time runs out — speed is points.",
+    color: "#c8ff00",
+  },
+  {
+    id: "slide",
+    num: "02",
+    title: "Cover Slide",
+    tagline: "Tile Puzzle Challenge.",
+    desc: "Slide album art tiles into place before the clock expires. Choose 3×3, 5×5, or 7×7 and race for the cleanest solve.",
+    color: "#ff9f1c",
+  },
+  {
+    id: "blind",
+    num: "03",
     title: "Blind Taste Test",
     tagline: "No labels. Just sound.",
     desc: "A 10-second clip from your own library plays — no hints. Guess the artist and whether it's a top-10 track. It humbles everyone.",
@@ -15,7 +31,7 @@ const GAMES = [
   },
   {
     id: "discover",
-    num: "02",
+    num: "04",
     title: "Discover",
     tagline: "Community-curated playlists.",
     desc: "Browse and save playlists shared by the community. Filter by mood, vote on favourites, and find your next obsession.",
@@ -102,7 +118,7 @@ export default function Home() {
           {status !== "loading" && (
             <button
               onClick={() => signIn("spotify")}
-              className="nav-connect font-mono text-[10px] tracking-[0.18em] text-white/35 flex items-center gap-2"
+              className="nav-connect font-mono text-xs tracking-[0.18em] text-white/35 flex items-center gap-2"
             >
               <span className="hidden sm:inline">CONNECT SPOTIFY</span>
               <span className="text-white/20">↗</span>
@@ -150,7 +166,7 @@ export default function Home() {
 
           {/* Content */}
           <div className="relative z-10 flex flex-col items-center text-center px-6">
-            <p className="fu1 font-mono text-[9px] md:text-[10px] tracking-[0.5em] uppercase mb-10"
+            <p className="fu1 font-mono text-xs tracking-[0.5em] uppercase mb-10"
               style={{ color: "rgba(255,255,255,0.22)" }}>
               Spotify · Your Music · Your History
             </p>
@@ -175,7 +191,7 @@ export default function Home() {
 
             <div className="fu4 mt-14">
               {status === "loading" ? (
-                <div className="font-mono text-[10px] tracking-widest animate-pulse" style={{ color: "rgba(255,255,255,0.2)" }}>
+                <div className="font-mono text-xs tracking-widest animate-pulse" style={{ color: "rgba(255,255,255,0.2)" }}>
                   LOADING...
                 </div>
               ) : (
@@ -201,7 +217,7 @@ export default function Home() {
               )}
             </div>
 
-            <p className="fu5 mt-5 font-mono text-[9px] tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.18)" }}>
+            <p className="fu5 mt-5 font-mono text-xs tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.18)" }}>
               Uses your Spotify listening history · No data stored without consent
             </p>
           </div>
@@ -215,7 +231,7 @@ export default function Home() {
               className="w-px h-8"
               style={{ background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.18))" }}
             />
-            <span className="font-mono text-[8px] tracking-[0.3em]" style={{ color: "rgba(255,255,255,0.18)" }}>
+            <span className="font-mono text-xs tracking-[0.3em]" style={{ color: "rgba(255,255,255,0.18)" }}>
               SCROLL
             </span>
           </div>
@@ -231,7 +247,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
               <div>
                 <p
-                  className="font-mono text-[9px] tracking-[0.45em] mb-4 uppercase"
+                  className="font-mono text-xs tracking-[0.45em] mb-4 uppercase"
                   style={{ color: "rgba(255,255,255,0.22)" }}
                 >
                   The Games
@@ -240,7 +256,7 @@ export default function Home() {
                   className="font-display leading-none text-white"
                   style={{ fontSize: "clamp(48px, 8vw, 96px)", letterSpacing: "0.06em" }}
                 >
-                  TWO WAYS<br />TO LISTEN.
+                  FOUR WAYS<br />TO LISTEN.
                 </h2>
               </div>
               <p
@@ -296,7 +312,7 @@ export default function Home() {
                           {g.title}
                         </h3>
                         <span
-                          className="font-mono text-[10px] tracking-[0.18em] hidden sm:block"
+                          className="font-mono text-xs tracking-[0.18em] hidden sm:block"
                           style={{ color: `${g.color}55` }}
                         >
                           {g.tagline}
@@ -315,7 +331,7 @@ export default function Home() {
                   <div className="flex items-center gap-3 shrink-0">
                     {g.premium && (
                       <span
-                        className="hidden sm:block font-mono text-[8px] tracking-[0.2em] px-2.5 py-1 rounded-full"
+                        className="hidden sm:block font-mono text-xs tracking-[0.2em] px-2.5 py-1 rounded-full"
                         style={{
                           border: `1px solid ${g.color}35`,
                           color: `${g.color}90`,
@@ -367,7 +383,7 @@ export default function Home() {
           />
           <div className="relative z-10 max-w-5xl mx-auto text-center">
             <p
-              className="font-mono text-[9px] tracking-[0.5em] uppercase mb-10"
+              className="font-mono text-xs tracking-[0.5em] uppercase mb-10"
               style={{ color: "rgba(255,255,255,0.2)" }}
             >
               The Philosophy
@@ -387,7 +403,7 @@ export default function Home() {
               style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent)" }}
             />
             <p
-              className="mt-10 font-mono text-[10px] tracking-[0.22em] leading-loose max-w-sm mx-auto"
+              className="mt-10 font-mono text-xs tracking-[0.22em] leading-loose max-w-sm mx-auto"
               style={{ color: "rgba(255,255,255,0.22)" }}
             >
               Every game is built around the music you actually listen to.
@@ -453,7 +469,7 @@ export default function Home() {
             <span className="font-display text-sm tracking-[0.2em] text-accent opacity-60">HOOKD</span>
           </div>
           <div
-            className="flex items-center gap-6 font-mono text-[9px] tracking-[0.18em]"
+            className="flex items-center gap-6 font-mono text-xs tracking-[0.18em]"
             style={{ color: "rgba(255,255,255,0.18)" }}
           >
             <span>Powered by Spotify Web API</span>
