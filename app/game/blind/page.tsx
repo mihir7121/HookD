@@ -6,6 +6,7 @@ import { getTopTracks, shuffle } from "@/lib/spotify";
 import { useGameStore } from "@/lib/store";
 import GameLayout from "@/components/GameLayout";
 import ScorePopup from "@/components/ScorePopup";
+import { HowToPlay, useHowToPlay } from "@/components/HowToPlay";
 
 const COLOR = "#f472b6";
 const TOTAL_ROUNDS = 6;
@@ -117,6 +118,7 @@ export default function BlindGame() {
   const artistCorrectRef = useRef(0);
 
   const accessToken = (session as any)?.accessToken as string | undefined;
+  const { show: showHtp, dismiss: dismissHtp, neverShow: neverShowHtp } = useHowToPlay("blind");
 
   // ── Eligibility check ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -448,7 +450,9 @@ export default function BlindGame() {
 
   if (phase === "gate") {
     return (
-      <GameLayout title="Blind Taste Test" color={COLOR} onBack={handleBack}>
+      <>
+        {showHtp && <HowToPlay gameId="blind" onDismiss={dismissHtp} onNeverShow={neverShowHtp} />}
+        <GameLayout title="Blind Taste Test" color={COLOR} onBack={handleBack}>
         <div className="flex flex-col items-center justify-center py-32 px-4 text-center gap-8 max-w-sm mx-auto">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center text-3xl"
@@ -492,7 +496,8 @@ export default function BlindGame() {
             ATTEMPT IS CONSUMED ON START
           </p>
         </div>
-      </GameLayout>
+        </GameLayout>
+      </>
     );
   }
 
