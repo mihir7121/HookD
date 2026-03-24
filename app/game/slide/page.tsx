@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, PanInfo } from "framer-motion";
 import GameLayout from "@/components/GameLayout";
 import ScorePopup from "@/components/ScorePopup";
+import { HowToPlay, useHowToPlay } from "@/components/HowToPlay";
 import { getTopTracks, shuffle } from "@/lib/spotify";
 import { useGameStore } from "@/lib/store";
 import {
@@ -75,6 +76,7 @@ export default function CoverSlidePage() {
 
   const accessToken = (session as any)?.accessToken as string | undefined;
   const config = DIFFICULTY_CONFIG[difficulty];
+  const { show: showHtp, dismiss: dismissHtp, neverShow: neverShowHtp } = useHowToPlay("slide");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -336,7 +338,9 @@ export default function CoverSlidePage() {
 
   if (phase === "difficulty") {
     return (
-      <GameLayout title="Cover Slide" color={COLOR} onBack={backToLobby}>
+      <>
+        {showHtp && <HowToPlay gameId="slide" onDismiss={dismissHtp} onNeverShow={neverShowHtp} />}
+        <GameLayout title="Cover Slide" color={COLOR} onBack={backToLobby}>
         <div className="max-w-xl mx-auto py-12 px-4 flex flex-col gap-8">
           <div className="text-center">
             <p className="font-display text-4xl leading-none" style={{ color: COLOR }}>
@@ -376,7 +380,8 @@ export default function CoverSlidePage() {
             START COVER SLIDE →
           </button>
         </div>
-      </GameLayout>
+        </GameLayout>
+      </>
     );
   }
 

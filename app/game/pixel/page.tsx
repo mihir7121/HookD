@@ -6,6 +6,7 @@ import { getTopTracks, getTopArtists, shuffle } from "@/lib/spotify";
 import { useGameStore } from "@/lib/store";
 import GameLayout from "@/components/GameLayout";
 import ScorePopup from "@/components/ScorePopup";
+import { HowToPlay, useHowToPlay } from "@/components/HowToPlay";
 
 const COLOR = "#c8ff00";
 const TOTAL_ROUNDS = 8;
@@ -67,6 +68,7 @@ export default function PixelPanic() {
   const timeLeftRef = useRef(ROUND_TIME);
 
   const accessToken = (session as any)?.accessToken as string | undefined;
+  const { show: showHtp, dismiss: dismissHtp, neverShow: neverShowHtp } = useHowToPlay("pixel");
 
   // ── Load genres ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -292,7 +294,9 @@ export default function PixelPanic() {
   // ── Phase: genre select ───────────────────────────────────────────────────────
   if (phase === "genre_select") {
     return (
-      <GameLayout title="Pixel Panic" color={COLOR} onBack={() => router.push("/game")}>
+      <>
+        {showHtp && <HowToPlay gameId="pixel" onDismiss={dismissHtp} onNeverShow={neverShowHtp} />}
+        <GameLayout title="Pixel Panic" color={COLOR} onBack={() => router.push("/game")}>
         <div className="flex flex-col items-center py-12 px-4 w-full max-w-lg mx-auto gap-8">
           <div className="text-center">
             <p
@@ -360,7 +364,8 @@ export default function PixelPanic() {
               : `START GAME${selectedGenres.length > 0 ? ` · ${selectedGenres.length} GENRE${selectedGenres.length > 1 ? "S" : ""}` : ""} →`}
           </button>
         </div>
-      </GameLayout>
+        </GameLayout>
+      </>
     );
   }
 

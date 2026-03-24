@@ -1,7 +1,7 @@
 "use client";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const GAMES = [
   {
@@ -90,13 +90,30 @@ export default function Home() {
         }
         .nav-connect { transition: color 0.25s ease, opacity 0.25s ease; }
         .nav-connect:hover { color: #fff; }
-        .game-row-line { transform: scaleX(0); transform-origin: left; transition: transform 0.5s cubic-bezier(0.16,1,0.3,1); }
-        .game-row:hover .game-row-line { transform: scaleX(1); }
-        .game-title-text { transition: color 0.3s ease; }
-        .game-arrow { transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; }
-        .game-row:hover .game-arrow { transform: translateX(6px); }
-        .game-num-text { transition: opacity 0.3s ease; }
-        .game-row:hover .game-num-text { opacity: 1 !important; }
+        .game-card { transition: border-color 0.35s ease, background 0.35s ease, box-shadow 0.35s ease; }
+        .game-card:hover { box-shadow: 0 0 60px rgba(0,0,0,0.4), inset 0 0 40px rgba(255,255,255,0.01); }
+        .game-title-text { transition: color 0.35s ease; }
+        .game-arrow { transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), border-color 0.3s ease, color 0.3s ease, background 0.3s ease; }
+        .game-card:hover .game-arrow { transform: translateX(4px); }
+        @keyframes pixelBlur {
+          0%, 15%  { filter: blur(9px) brightness(0.55); }
+          72%, 87% { filter: blur(0px) brightness(1); }
+          100%     { filter: blur(9px) brightness(0.55); }
+        }
+        @keyframes waveBar1 { 0%,100%{height:6px}  50%{height:28px} }
+        @keyframes waveBar2 { 0%,100%{height:22px} 50%{height:7px}  }
+        @keyframes waveBar3 { 0%,100%{height:12px} 50%{height:34px} }
+        @keyframes waveBar4 { 0%,100%{height:30px} 50%{height:10px} }
+        @keyframes waveBar5 { 0%,100%{height:9px}  50%{height:24px} }
+        @keyframes tileSlide {
+          0%, 18%  { transform: translateY(0); }
+          48%, 72% { transform: translateY(-37px); }
+          88%,100% { transform: translateY(0); }
+        }
+        @keyframes discoverItem {
+          0%,30%  { background: rgba(0,207,255,0.08); border-color: rgba(0,207,255,0.28); }
+          36%,100%{ background: rgba(255,255,255,0.025); border-color: rgba(0,207,255,0.09); }
+        }
       `}</style>
 
       <main className="min-h-screen bg-bg text-white overflow-x-hidden selection:bg-accent/20 selection:text-accent">
@@ -268,70 +285,45 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Game rows */}
-          <div className="pb-28">
+          {/* Game cards */}
+          <div className="px-8 md:px-16 pb-28 grid grid-cols-1 md:grid-cols-2 gap-5">
             {GAMES.map((g) => (
               <div
                 key={g.id}
-                className="game-row group px-8 md:px-16 py-9 cursor-default relative"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.055)" }}
+                className="game-card relative flex flex-col cursor-default overflow-hidden"
+                style={{
+                  border: `1px solid ${hoveredGame === g.id ? g.color + "30" : "rgba(255,255,255,0.07)"}`,
+                  background: hoveredGame === g.id ? `${g.color}06` : "rgba(255,255,255,0.015)",
+                  minHeight: "380px",
+                }}
                 onMouseEnter={() => setHoveredGame(g.id)}
                 onMouseLeave={() => setHoveredGame(null)}
               >
-                {/* Hover background tint */}
+                {/* Ambient glow */}
                 <div
                   className="absolute inset-0 pointer-events-none transition-opacity duration-500"
                   style={{
-                    background: `radial-gradient(ellipse at left center, ${g.color}07 0%, transparent 60%)`,
+                    background: `radial-gradient(ellipse at top left, ${g.color}0a 0%, transparent 65%)`,
                     opacity: hoveredGame === g.id ? 1 : 0,
                   }}
                 />
 
-                <div className="relative flex items-start md:items-center justify-between gap-8">
-                  {/* Left: number + title + desc */}
-                  <div className="flex items-start md:items-center gap-6 md:gap-10 flex-1 min-w-0">
-                    {/* Number */}
+                {/* Animated preview */}
+                <GamePreview id={g.id} color={g.color} />
+
+                {/* Card content */}
+                <div className="relative flex flex-col flex-1 p-7">
+                  {/* Top row: number + premium badge */}
+                  <div className="flex items-start justify-between mb-5">
                     <span
-                      className="game-num-text font-display text-4xl md:text-6xl shrink-0 transition-opacity duration-300"
-                      style={{ color: g.color, opacity: 0.22 }}
+                      className="font-display text-5xl md:text-6xl transition-opacity duration-300"
+                      style={{ color: g.color, opacity: hoveredGame === g.id ? 0.55 : 0.2 }}
                     >
                       {g.num}
                     </span>
-
-                    {/* Title + desc */}
-                    <div className="flex flex-col gap-2 flex-1 min-w-0">
-                      <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
-                        <h3
-                          className="game-title-text font-display tracking-wider whitespace-nowrap"
-                          style={{
-                            fontSize: "clamp(28px, 4.5vw, 54px)",
-                            color: hoveredGame === g.id ? g.color : "#fff",
-                            transition: "color 0.35s ease",
-                          }}
-                        >
-                          {g.title}
-                        </h3>
-                        <span
-                          className="font-mono text-xs tracking-[0.18em] hidden sm:block"
-                          style={{ color: `${g.color}55` }}
-                        >
-                          {g.tagline}
-                        </span>
-                      </div>
-                      <p
-                        className="font-body italic text-base leading-relaxed"
-                        style={{ color: "rgba(255,255,255,0.32)", maxWidth: "480px" }}
-                      >
-                        {g.desc}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right: premium badge + arrow */}
-                  <div className="flex items-center gap-3 shrink-0">
                     {g.premium && (
                       <span
-                        className="hidden sm:block font-mono text-xs tracking-[0.2em] px-2.5 py-1 rounded-full"
+                        className="font-mono text-xs tracking-[0.2em] px-2.5 py-1 rounded-full"
                         style={{
                           border: `1px solid ${g.color}35`,
                           color: `${g.color}90`,
@@ -341,34 +333,51 @@ export default function Home() {
                         PREMIUM
                       </span>
                     )}
+                  </div>
+
+                  {/* Title + tagline + desc */}
+                  <div className="flex-1 flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <h3
+                        className="game-title-text font-display tracking-wider"
+                        style={{
+                          fontSize: "clamp(26px, 3vw, 40px)",
+                          color: hoveredGame === g.id ? g.color : "#fff",
+                        }}
+                      >
+                        {g.title}
+                      </h3>
+                      <span
+                        className="font-mono text-xs tracking-[0.18em]"
+                        style={{ color: `${g.color}60` }}
+                      >
+                        {g.tagline}
+                      </span>
+                    </div>
+                    <p
+                      className="font-body italic text-sm leading-relaxed"
+                      style={{ color: "rgba(255,255,255,0.32)" }}
+                    >
+                      {g.desc}
+                    </p>
+                  </div>
+
+                  {/* Bottom: arrow */}
+                  <div className="flex justify-end mt-6">
                     <div
-                      className="game-arrow w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-mono text-sm"
+                      className="game-arrow w-9 h-9 rounded-full flex items-center justify-center font-mono text-sm"
                       style={{
                         border: `1px solid ${hoveredGame === g.id ? g.color + "50" : "rgba(255,255,255,0.1)"}`,
                         color: hoveredGame === g.id ? g.color : "rgba(255,255,255,0.25)",
                         background: hoveredGame === g.id ? `${g.color}08` : "transparent",
-                        transition: "border-color 0.3s ease, color 0.3s ease, background 0.3s ease, transform 0.35s cubic-bezier(0.16,1,0.3,1)",
                       }}
                     >
                       →
                     </div>
                   </div>
                 </div>
-
-                {/* Animated bottom line on hover */}
-                <div
-                  className="absolute bottom-0 left-8 md:left-16 right-8 md:right-16 h-px"
-                  style={{
-                    background: `linear-gradient(to right, ${g.color}40, transparent)`,
-                    transform: hoveredGame === g.id ? "scaleX(1)" : "scaleX(0)",
-                    transformOrigin: "left",
-                    transition: "transform 0.5s cubic-bezier(0.16,1,0.3,1)",
-                  }}
-                />
               </div>
             ))}
-            {/* Closing rule */}
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.055)" }} />
           </div>
         </section>
 
@@ -395,7 +404,7 @@ export default function Home() {
                 color: "rgba(255,255,255,0.78)",
               }}
             >
-              "Your Spotify history is the exam.{" "}
+              "Your Spotify history is the syllabus.{" "}
               <span style={{ color: "#c8ff00" }}>HookD</span> is the test."
             </blockquote>
             <div
@@ -479,6 +488,129 @@ export default function Home() {
         </footer>
       </main>
     </>
+  );
+}
+
+function GamePreview({ id, color }: { id: string; color: string }) {
+  const wrap: React.CSSProperties = {
+    width: "100%",
+    height: "140px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
+    flexShrink: 0,
+    borderBottom: "1px solid rgba(255,255,255,0.05)",
+    background: "rgba(0,0,0,0.22)",
+  };
+
+  if (id === "pixel") {
+    const blocks = [
+      "#1a3010","#5a8a35","#c8ff00","#2d4a1e",
+      "#3d6b28","#a5d63c","#8bc34a","#1f3a14",
+      "#c8ff00","#1a2e0f","#4e7a23","#6aa831",
+      "#2d4a1e","#8bc34a","#1f3a14","#5a8a35",
+    ];
+    return (
+      <div style={wrap}>
+        <div style={{ animation: "pixelBlur 4s ease-in-out infinite" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 22px)", gridTemplateRows: "repeat(4, 22px)", gap: "3px" }}>
+            {blocks.map((c, i) => <div key={i} style={{ background: c, borderRadius: "2px" }} />)}
+          </div>
+        </div>
+        <span style={{ position: "absolute", bottom: 8, right: 10, fontFamily: "monospace", fontSize: "8px", letterSpacing: "0.22em", color: `${color}50` }}>
+          SHARPENING...
+        </span>
+      </div>
+    );
+  }
+
+  if (id === "slide") {
+    const tiles: (number | null)[] = [1, 2, null, 4, 5, 6, 7, 8, 3];
+    return (
+      <div style={wrap}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 34px)", gridTemplateRows: "repeat(3, 34px)", gap: "3px" }}>
+          {tiles.map((t, i) =>
+            t === null ? (
+              <div key={i} style={{ borderRadius: "3px", border: `1px dashed ${color}20`, background: "transparent" }} />
+            ) : (
+              <div key={i} style={{
+                borderRadius: "3px",
+                background: i === 5 ? `${color}22` : "rgba(255,255,255,0.06)",
+                border: `1px solid ${i === 5 ? color + "45" : "rgba(255,255,255,0.1)"}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontFamily: "monospace", fontSize: "11px",
+                color: i === 5 ? color : "rgba(255,255,255,0.28)",
+                animation: i === 5 ? "tileSlide 3.5s ease-in-out infinite" : "none",
+                position: "relative", zIndex: i === 5 ? 2 : 1,
+              }}>
+                {t}
+              </div>
+            )
+          )}
+        </div>
+        <span style={{ position: "absolute", bottom: 8, right: 10, fontFamily: "monospace", fontSize: "8px", letterSpacing: "0.22em", color: `${color}50` }}>
+          SLIDE TO SOLVE
+        </span>
+      </div>
+    );
+  }
+
+  if (id === "blind") {
+    const bars = [
+      { w: "waveBar1", d: "0s" }, { w: "waveBar3", d: "0.1s" }, { w: "waveBar5", d: "0.2s" },
+      { w: "waveBar2", d: "0.05s" }, { w: "waveBar4", d: "0.3s" }, { w: "waveBar1", d: "0.15s" },
+      { w: "waveBar3", d: "0.25s" }, { w: "waveBar5", d: "0.4s" }, { w: "waveBar2", d: "0.1s" },
+      { w: "waveBar4", d: "0.35s" }, { w: "waveBar1", d: "0.05s" }, { w: "waveBar3", d: "0.2s" },
+    ];
+    return (
+      <div style={wrap}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "5px", height: "50px" }}>
+          {bars.map((b, i) => (
+            <div key={i} style={{
+              width: "4px", height: "10px",
+              background: color, opacity: 0.5, borderRadius: "2px",
+              animation: `${b.w} ${1.1 + (i % 3) * 0.2}s ease-in-out ${b.d} infinite`,
+            }} />
+          ))}
+        </div>
+        <span style={{ position: "absolute", bottom: 8, right: 10, fontFamily: "monospace", fontSize: "8px", letterSpacing: "0.22em", color: `${color}50` }}>
+          10s CLIP
+        </span>
+      </div>
+    );
+  }
+
+  // discover
+  const items = [
+    { label: "Late Night Vibes", sub: "94 saves", delay: "0s" },
+    { label: "Indie Essentials", sub: "218 saves", delay: "-6s" },
+    { label: "Focus Mode",       sub: "156 saves", delay: "-3s" },
+  ];
+  return (
+    <div style={wrap}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "5px", width: "190px" }}>
+        {items.map((item, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "6px 10px", borderRadius: "3px",
+            border: `1px solid ${color}09`,
+            animation: `discoverItem 9s linear ${item.delay} infinite`,
+          }}>
+            <span style={{ fontFamily: "monospace", fontSize: "9px", letterSpacing: "0.05em", color: "rgba(255,255,255,0.38)" }}>
+              {item.label}
+            </span>
+            <span style={{ fontFamily: "monospace", fontSize: "8px", letterSpacing: "0.1em", color: `${color}60` }}>
+              {item.sub}
+            </span>
+          </div>
+        ))}
+      </div>
+      <span style={{ position: "absolute", bottom: 8, right: 10, fontFamily: "monospace", fontSize: "8px", letterSpacing: "0.22em", color: `${color}50` }}>
+        COMMUNITY
+      </span>
+    </div>
   );
 }
 
