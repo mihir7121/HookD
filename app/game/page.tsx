@@ -167,6 +167,18 @@ export default function GameLobby() {
                   <img src={user.image} alt={user.name || ""} className="w-6 h-6 md:w-7 md:h-7 rounded-full grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
                 </button>
               )}
+              {/* Sign out — icon only on mobile, full label on desktop */}
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="md:hidden flex items-center justify-center transition-opacity opacity-40 hover:opacity-80"
+                title="Sign out"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: "rgba(255,255,255,0.6)" }}>
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
               <div className="hidden md:flex flex-col">
                 <button onClick={() => router.push("/profile")} className="font-mono text-xs text-textmid leading-tight hover:text-accent transition-colors text-left">
                   {user?.name}

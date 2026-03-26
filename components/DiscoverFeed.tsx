@@ -1,7 +1,8 @@
 "use client";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import { MOOD_OPTIONS } from "@/lib/discover";
+import { TagSelect } from "@/components/TagSelect";
 
 const COLOR = "#00cfff";
 
@@ -37,6 +38,9 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
   const [oneLinerInput, setOneLinerInput] = useState("");
   const [moodSelection, setMoodSelection] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [showMoodMenu, setShowMoodMenu] = useState(false);
+  const [moodMenuSearch, setMoodMenuSearch] = useState("");
+  const moodMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchFeed = useCallback(async () => {
     setLoading(true);
@@ -79,12 +83,6 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
   const handleReport = async (id: string) => {
     if (!authenticated) return;
     await fetch("/api/discover/report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ submissionId: id, reason: "spam" }) });
-  };
-
-  const toggleMood = (mood: string) => {
-    setMoodSelection((prev) =>
-      prev.includes(mood) ? prev.filter((m) => m !== mood) : prev.length >= 3 ? prev : [...prev, mood]
-    );
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -160,15 +158,14 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
             </div>
             <div>
               <label className="font-mono text-xs text-textdim tracking-[0.15em] uppercase">Moods (max 3)</label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {MOOD_OPTIONS.map((mood) => {
-                  const selected = moodSelection.includes(mood);
-                  return (
-                    <button key={mood} type="button" onClick={() => toggleMood(mood)} className="px-2.5 py-1.5 border font-mono text-xs tracking-[0.13em] uppercase transition-colors" style={{ borderColor: selected ? COLOR : "#252530", color: selected ? COLOR : "#666", background: selected ? `${COLOR}10` : "transparent" }}>
-                      {mood.replace("-", " ")}
-                    </button>
-                  );
-                })}
+              <div className="mt-2">
+                <TagSelect
+                  value={moodSelection}
+                  onChange={setMoodSelection}
+                  suggestions={MOOD_OPTIONS}
+                  max={3}
+                  color={COLOR}
+                />
               </div>
               <button type="submit" disabled={submitting || moodSelection.length < 1} className="mt-4 w-full px-3 py-2.5 border font-mono text-xs tracking-[0.2em] disabled:opacity-40 transition-colors" style={{ borderColor: COLOR, color: COLOR }}>
                 {submitting ? "SUBMITTING..." : "SUBMIT"}
@@ -188,16 +185,127 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => setSelectedMood("")} className="px-3 py-1.5 border font-mono text-xs tracking-[0.14em] uppercase transition-colors" style={{ borderColor: !selectedMood ? `${COLOR}70` : "#252530", color: !selectedMood ? COLOR : "#555" }}>
-            All
-          </button>
-          {MOOD_OPTIONS.map((mood) => (
-            <button key={mood} onClick={() => setSelectedMood(mood)} className="px-3 py-1.5 border font-mono text-xs tracking-[0.14em] uppercase transition-colors" style={{ borderColor: selectedMood === mood ? `${COLOR}70` : "#252530", color: selectedMood === mood ? COLOR : "#555" }}>
-              {mood.replace("-", " ")}
-            </button>
-          ))}
-        </div>
+        {/* Mood filter — inline for first 8, overflow goes into a searchable dropdown */}
+        {(() => {
+          const INLINE_LIMIT = 8;
+          const inlineTags = MOOD_OPTIONS.slice(0, INLINE_LIMIT);
+          const overflowTags = MOOD_OPTIONS.slice(INLINE_LIMIT);
+          // If selected mood is in overflow, surface it inline so it's always visible
+          const selectedInOverflow = selectedMood && overflowTags.includes(selectedMood);
+          const menuFiltered = overflowTags.filter((m) =>
+            m.includes(moodMenuSearch.toLowerCase().trim())
+          );
+
+          return (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* All */}
+              <button
+                onClick={() => setSelectedMood("")}
+                className="px-3 py-1.5 border font-mono text-xs tracking-[0.14em] uppercase transition-colors"
+                style={{ borderColor: !selectedMood ? `${COLOR}70` : "#252530", color: !selectedMood ? COLOR : "#555" }}
+              >
+                All
+              </button>
+
+              {/* First 8 inline */}
+              {inlineTags.map((mood) => (
+                <button
+                  key={mood}
+                  onClick={() => setSelectedMood(mood)}
+                  className="px-3 py-1.5 border font-mono text-xs tracking-[0.14em] uppercase transition-colors"
+                  style={{ borderColor: selectedMood === mood ? `${COLOR}70` : "#252530", color: selectedMood === mood ? COLOR : "#555" }}
+                >
+                  {mood.replace(/-/g, " ")}
+                </button>
+              ))}
+
+              {/* Surface selected overflow tag inline */}
+              {selectedInOverflow && (
+                <button
+                  onClick={() => setSelectedMood(selectedMood)}
+                  className="px-3 py-1.5 border font-mono text-xs tracking-[0.14em] uppercase transition-colors"
+                  style={{ borderColor: `${COLOR}70`, color: COLOR }}
+                >
+                  {selectedMood.replace(/-/g, " ")}
+                </button>
+              )}
+
+              {/* Overflow dropdown */}
+              {overflowTags.length > 0 && (
+                <div ref={moodMenuRef} className="relative">
+                  <button
+                    onClick={() => {
+                      setShowMoodMenu((s) => !s);
+                      setMoodMenuSearch("");
+                    }}
+                    className="px-3 py-1.5 border font-mono text-xs tracking-[0.14em] uppercase transition-colors flex items-center gap-1.5"
+                    style={{
+                      borderColor: showMoodMenu || selectedInOverflow ? `${COLOR}70` : "#252530",
+                      color: showMoodMenu || selectedInOverflow ? COLOR : "#555",
+                    }}
+                  >
+                    {selectedInOverflow ? "1 active" : `+${overflowTags.length} more`}
+                    <span style={{ fontSize: "9px", opacity: 0.7 }}>{showMoodMenu ? "▲" : "▼"}</span>
+                  </button>
+
+                  {showMoodMenu && (
+                    <>
+                      {/* Backdrop */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowMoodMenu(false)}
+                      />
+                      <div
+                        className="absolute left-0 top-full mt-1 z-50 border overflow-hidden"
+                        style={{
+                          background: "#0d0d10",
+                          borderColor: `${COLOR}25`,
+                          width: "200px",
+                          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                        }}
+                      >
+                        {/* Search */}
+                        <div style={{ borderBottom: `1px solid ${COLOR}15` }}>
+                          <input
+                            autoFocus
+                            value={moodMenuSearch}
+                            onChange={(e) => setMoodMenuSearch(e.target.value)}
+                            placeholder="Search tags..."
+                            className="w-full px-3 py-2 bg-transparent font-mono text-xs text-textmid placeholder:text-textdim focus:outline-none"
+                          />
+                        </div>
+
+                        {/* Options */}
+                        <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+                          {menuFiltered.length === 0 ? (
+                            <p className="px-3 py-2 font-mono text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>
+                              No matches
+                            </p>
+                          ) : (
+                            menuFiltered.map((mood) => (
+                              <button
+                                key={mood}
+                                onClick={() => {
+                                  setSelectedMood(mood);
+                                  setShowMoodMenu(false);
+                                }}
+                                className="w-full text-left px-3 py-2 font-mono text-xs tracking-[0.12em] uppercase hover:bg-white/5 transition-colors"
+                                style={{ color: selectedMood === mood ? COLOR : "rgba(255,255,255,0.5)" }}
+                              >
+                                {selectedMood === mood && <span className="mr-1.5">✓</span>}
+                                {mood.replace(/-/g, " ")}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <div className="flex items-center gap-2 md:ml-auto">
           <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void fetchFeed()} placeholder="Search playlists..." className="px-3 py-1.5 bg-bg2 border border-border font-mono text-xs text-textmid placeholder:text-textdim focus:outline-none focus:border-accent/40" />
