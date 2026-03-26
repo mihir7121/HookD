@@ -2,6 +2,8 @@
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import { DiscoverFeed } from "@/components/DiscoverFeed";
+import { TrendingCarousel } from "@/components/TrendingCarousel";
 
 const GAMES = [
   {
@@ -122,7 +124,7 @@ export default function Home() {
 
         {/* ── NAVIGATION ── */}
         <nav
-          className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-8 md:px-12 py-5"
+          className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-5 md:px-12 py-5"
           style={{
             background: "linear-gradient(to bottom, rgba(8,8,10,0.98) 0%, rgba(8,8,10,0) 100%)",
             backdropFilter: "blur(0px)",
@@ -132,15 +134,25 @@ export default function Home() {
             <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-accent" />
             <span className="font-display text-lg tracking-[0.22em] text-accent">HOOKD</span>
           </div>
-          {status !== "loading" && (
+          <div className="flex items-center gap-4 md:gap-7">
             <button
-              onClick={() => signIn("spotify")}
-              className="nav-connect font-mono text-xs tracking-[0.18em] text-white/35 flex items-center gap-2"
+              onClick={() => router.push("/about")}
+              className="nav-connect font-mono text-xs tracking-[0.18em] text-white/30 flex items-center gap-1.5"
             >
-              <span className="hidden sm:inline">CONNECT SPOTIFY</span>
-              <span className="text-white/20">↗</span>
+              <span>CREATED BY</span>
+              <span className="text-white/15">↗</span>
             </button>
-          )}
+            {status !== "loading" && (
+              <button
+                onClick={() => signIn("spotify")}
+                className="nav-connect font-mono text-xs tracking-[0.18em] text-white/35 flex items-center gap-2"
+              >
+                <span className="hidden sm:inline">CONNECT SPOTIFY</span>
+                <span className="sm:hidden text-white/30">↗</span>
+                <span className="hidden sm:inline text-white/20">↗</span>
+              </button>
+            )}
+          </div>
         </nav>
 
         {/* ── HERO ── */}
@@ -206,7 +218,7 @@ export default function Home() {
               Your Spotify history. Your music knowledge. Find out what you actually know.
             </p>
 
-            <div className="fu4 mt-14">
+            <div className="fu4 mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
               {status === "loading" ? (
                 <div className="font-mono text-xs tracking-widest animate-pulse" style={{ color: "rgba(255,255,255,0.2)" }}>
                   LOADING...
@@ -232,6 +244,25 @@ export default function Home() {
                   </span>
                 </button>
               )}
+              <a
+                href="#discover"
+                className="cta-glow group flex items-center gap-4 px-10 py-4 font-mono text-xs tracking-[0.2em] uppercase"
+                style={{
+                  border: "1px solid rgba(0,207,255,0.28)",
+                  background: "rgba(0,207,255,0.04)",
+                  backdropFilter: "blur(12px)",
+                  boxShadow: "0 0 30px rgba(0,207,255,0.09), inset 0 0 30px rgba(0,207,255,0.02)",
+                  color: "#00cfff",
+                }}
+              >
+                Browse community playlists
+                <span
+                  className="transition-transform duration-300 group-hover:translate-y-1"
+                  style={{ color: "rgba(0,207,255,0.4)" }}
+                >
+                  ↓
+                </span>
+              </a>
             </div>
 
             <p className="fu5 mt-5 font-mono text-xs tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.18)" }}>
@@ -251,6 +282,20 @@ export default function Home() {
             <span className="font-mono text-xs tracking-[0.3em]" style={{ color: "rgba(255,255,255,0.18)" }}>
               SCROLL
             </span>
+          </div>
+        </section>
+
+        {/* ── TRENDING ── */}
+        <TrendingCarousel />
+
+        {/* ── DISCOVER ── */}
+        <section
+          id="discover"
+          className="relative px-8 md:px-16 pb-24"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          <div className="pt-24 max-w-7xl mx-auto">
+            <DiscoverFeed authenticated={!!session} />
           </div>
         </section>
 
@@ -444,27 +489,48 @@ export default function Home() {
             <p className="font-body italic text-xl" style={{ color: "rgba(255,255,255,0.3)" }}>
               Your listening history awaits.
             </p>
-            {status !== "loading" && (
-              <button
-                onClick={() => signIn("spotify")}
-                className="cta-glow group flex items-center gap-4 px-12 py-5 font-mono text-sm tracking-[0.2em] uppercase text-accent"
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              {status !== "loading" && (
+                <button
+                  onClick={() => signIn("spotify")}
+                  className="cta-glow group flex items-center gap-4 px-12 py-5 font-mono text-sm tracking-[0.2em] uppercase text-accent"
+                  style={{
+                    border: "1px solid rgba(200,255,0,0.28)",
+                    background: "rgba(200,255,0,0.04)",
+                    backdropFilter: "blur(12px)",
+                    boxShadow: "0 0 40px rgba(200,255,0,0.1), inset 0 0 30px rgba(200,255,0,0.02)",
+                  }}
+                >
+                  <SpotifyIcon />
+                  Connect with Spotify
+                  <span
+                    className="transition-transform duration-300 group-hover:translate-x-1"
+                    style={{ color: "rgba(200,255,0,0.4)" }}
+                  >
+                    →
+                  </span>
+                </button>
+              )}
+              <a
+                href="#discover"
+                className="cta-glow group flex items-center gap-4 px-12 py-5 font-mono text-sm tracking-[0.2em] uppercase"
                 style={{
-                  border: "1px solid rgba(200,255,0,0.28)",
-                  background: "rgba(200,255,0,0.04)",
+                  border: "1px solid rgba(0,207,255,0.28)",
+                  background: "rgba(0,207,255,0.04)",
                   backdropFilter: "blur(12px)",
-                  boxShadow: "0 0 40px rgba(200,255,0,0.1), inset 0 0 30px rgba(200,255,0,0.02)",
+                  boxShadow: "0 0 40px rgba(0,207,255,0.1), inset 0 0 30px rgba(0,207,255,0.02)",
+                  color: "#00cfff",
                 }}
               >
-                <SpotifyIcon />
-                Connect with Spotify
+                Browse community playlists
                 <span
-                  className="transition-transform duration-300 group-hover:translate-x-1"
-                  style={{ color: "rgba(200,255,0,0.4)" }}
+                  className="transition-transform duration-300 group-hover:translate-y-1"
+                  style={{ color: "rgba(0,207,255,0.4)" }}
                 >
-                  →
+                  ↓
                 </span>
-              </button>
-            )}
+              </a>
+            </div>
           </div>
         </section>
 

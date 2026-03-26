@@ -14,17 +14,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "submissionId is required" }, { status: 400 });
   }
 
-  const { error } = await supabaseAdmin.from("playlist_votes").upsert(
-    {
-      user_id: userId,
-      submission_id: submissionId,
-      value: 1,
-    },
-    { onConflict: "user_id,submission_id" }
-  );
+  const remove = Boolean(body.remove);
 
-  if (error) {
-    return NextResponse.json({ error: "Failed to vote" }, { status: 500 });
+  if (remove) {
+    const { error } = await supabaseAdmin
+      .from("playlist_votes")
+      .delete()
+      .eq("user_id", userId)
+      .eq("submission_id", submissionId);
+    if (error) return NextResponse.json({ error: "Failed to unlike" }, { status: 500 });
+  } else {
+    const { error } = await supabaseAdmin.from("playlist_votes").upsert(
+      { user_id: userId, submission_id: submissionId, value: 1 },
+      { onConflict: "user_id,submission_id" }
+    );
+    if (error) return NextResponse.json({ error: "Failed to vote" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

@@ -2,7 +2,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { getTopTracks, getTopArtists, shuffle } from "@/lib/spotify";
+import { getTopTracksAllRanges, getSavedTracks, getTopArtists, shuffle } from "@/lib/spotify";
 import { useGameStore } from "@/lib/store";
 import GameLayout from "@/components/GameLayout";
 import ScorePopup from "@/components/ScorePopup";
@@ -103,13 +103,22 @@ export default function PixelPanic() {
       setPhase("loading_tracks");
       setLoadError(null);
       try {
-        const [artistsData, tracksData] = await Promise.all([
+        const [artistsData, tracksData, savedData] = await Promise.all([
           getTopArtists(accessToken, 50),
-          getTopTracks(accessToken, 50),
+          getTopTracksAllRanges(accessToken, 50),
+          getSavedTracks(accessToken, 50),
         ]);
 
         const artists: any[] = artistsData.items ?? [];
-        const tracks: any[] = tracksData.items ?? [];
+        // Merge top tracks + saved tracks, deduplicated by track id
+        const seenTrackIds = new Set<string>();
+        const tracks: any[] = [];
+        for (const t of [...(tracksData.items ?? []), ...(savedData.items ?? [])]) {
+          if (t?.id && !seenTrackIds.has(t.id)) {
+            seenTrackIds.add(t.id);
+            tracks.push(t);
+          }
+        }
 
         // Build unique album map
         const albumMap = new Map<string, PixelAlbum>();
