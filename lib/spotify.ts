@@ -23,6 +23,35 @@ export const getTopTracks = async (accessToken: string, limit = 50) => {
   );
 };
 
+/** Fetch top tracks across all three time ranges and return deduplicated items */
+export const getTopTracksAllRanges = async (accessToken: string, limitPerRange = 50): Promise<{ items: any[] }> => {
+  const [short, medium, long] = await Promise.allSettled([
+    spotifyFetch(`/me/top/tracks?limit=${limitPerRange}&time_range=short_term`, accessToken),
+    spotifyFetch(`/me/top/tracks?limit=${limitPerRange}&time_range=medium_term`, accessToken),
+    spotifyFetch(`/me/top/tracks?limit=${limitPerRange}&time_range=long_term`, accessToken),
+  ]);
+  const seen = new Set<string>();
+  const items: any[] = [];
+  for (const result of [short, medium, long]) {
+    if (result.status === "fulfilled") {
+      for (const track of result.value.items ?? []) {
+        if (track.id && !seen.has(track.id)) {
+          seen.add(track.id);
+          items.push(track);
+        }
+      }
+    }
+  }
+  return { items };
+};
+
+/** Fetch user's saved/liked tracks */
+export const getSavedTracks = async (accessToken: string, limit = 50): Promise<{ items: any[] }> => {
+  const data = await spotifyFetch(`/me/tracks?limit=${limit}`, accessToken);
+  // Saved tracks wrap each item in { added_at, track: {...} } — unwrap to match top tracks shape
+  return { items: (data.items ?? []).map((i: any) => i.track).filter(Boolean) };
+};
+
 /** Fetch user's top artists (needed for artist-silhouette game) */
 export const getTopArtists = async (accessToken: string, limit = 50) => {
   return spotifyFetch(

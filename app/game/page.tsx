@@ -1,11 +1,10 @@
 "use client";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useGameStore } from "@/lib/store";
-import { MOOD_OPTIONS } from "@/lib/discover";
+import { DiscoverFeed } from "@/components/DiscoverFeed";
 
-const DISCOVER_COLOR = "#00cfff";
 
 const games = [
   {
@@ -49,25 +48,6 @@ interface PersonalBests {
   blind: number | null;
 }
 
-type DiscoverEntry = {
-  id: string;
-  oneLiner: string;
-  moodTags: string[];
-  upvotes: number;
-  saves: number;
-  hasVoted: boolean;
-  hasSaved: boolean;
-  playlist: {
-    id: string;
-    spotifyPlaylistId: string;
-    url: string;
-    title: string;
-    image: string | null;
-    ownerName: string;
-    trackCount: number;
-  };
-  submitter: { name: string; image: string | null };
-};
 
 export default function GameLobby() {
   const { data: session, status } = useSession();
@@ -149,38 +129,42 @@ export default function GameLobby() {
 
         {/* Fixed nav */}
         <header
-          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-5"
+          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 md:px-8 py-4 md:py-5"
           style={{ background: "linear-gradient(to bottom, rgba(8,8,10,0.95) 0%, rgba(8,8,10,0.6) 70%, transparent 100%)" }}
         >
-          <button onClick={() => router.push("/")} className="flex items-center gap-3 group">
-            <div className="w-2 h-2 rounded-full bg-accent animate-pulse-accent" />
-            <span className="font-display text-2xl text-accent tracking-widest group-hover:opacity-70 transition-opacity">HOOKD</span>
+          <button onClick={() => router.push("/")} className="flex items-center gap-2 md:gap-3 group shrink-0">
+            <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-accent animate-pulse-accent" />
+            <span className="font-display text-xl md:text-2xl text-accent tracking-widest group-hover:opacity-70 transition-opacity">HOOKD</span>
           </button>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-4 font-mono text-xs">
+          <div className="flex items-center gap-2 md:gap-5 min-w-0">
+            {/* Score + streak */}
+            <div className="flex items-center gap-2 md:gap-4 font-mono text-xs">
               <div className="flex flex-col items-end">
-                <span className="text-textdim tracking-[0.2em] text-xs">SCORE</span>
-                <span className="text-accent text-base leading-tight">{score.toLocaleString()}</span>
+                <span className="hidden md:block text-textdim tracking-[0.2em] text-xs">SCORE</span>
+                <span className="text-accent text-sm md:text-base leading-tight">{score.toLocaleString()}</span>
               </div>
               {streak > 1 && (
                 <div className="flex flex-col items-end">
-                  <span className="text-textdim tracking-[0.2em] text-xs">STREAK</span>
-                  <span className="text-accent2 text-base leading-tight">×{streak}</span>
+                  <span className="hidden md:block text-textdim tracking-[0.2em] text-xs">STREAK</span>
+                  <span className="text-accent2 text-sm md:text-base leading-tight">×{streak}</span>
                 </div>
               )}
             </div>
 
-            <div className="w-px h-6 bg-border" />
-            <button onClick={() => router.push("/leaderboard")} className="font-mono text-xs text-textdim hover:text-accent tracking-[0.2em] uppercase transition-colors">
-              Leaderboard ↗
+            <div className="w-px h-5 bg-border hidden sm:block" />
+            <button onClick={() => router.push("/leaderboard")} className="hidden sm:block font-mono text-xs text-textdim hover:text-accent tracking-[0.2em] uppercase transition-colors whitespace-nowrap">
+              <span className="hidden md:inline">Leaderboard </span>↗
             </button>
-            <div className="w-px h-6 bg-border" />
+            <button onClick={() => router.push("/about")} className="hidden sm:block font-mono text-xs text-textdim hover:text-white tracking-[0.2em] uppercase transition-colors whitespace-nowrap">
+              <span className="hidden md:inline">Credits </span>↗
+            </button>
+            <div className="w-px h-5 bg-border hidden sm:block" />
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               {user?.image && (
                 <button onClick={() => router.push("/profile")}>
-                  <img src={user.image} alt={user.name || ""} className="w-7 h-7 rounded-full grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+                  <img src={user.image} alt={user.name || ""} className="w-6 h-6 md:w-7 md:h-7 rounded-full grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
                 </button>
               )}
               <div className="hidden md:flex flex-col">
@@ -237,7 +221,7 @@ export default function GameLobby() {
           <div className="mt-24 mb-12" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
 
           {/* Discover feed */}
-          <DiscoverSection authenticated={status === "authenticated"} />
+          <DiscoverFeed authenticated={status === "authenticated"} />
         </div>
 
         {/* Bottom gradient fade */}
@@ -331,234 +315,4 @@ function GameCard({
   );
 }
 
-function DiscoverSection({ authenticated }: { authenticated: boolean }) {
-  const [tab, setTab] = useState<"trending" | "new">("trending");
-  const [selectedMood, setSelectedMood] = useState("");
-  const [query, setQuery] = useState("");
-  const [entries, setEntries] = useState<DiscoverEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showSubmit, setShowSubmit] = useState(false);
-  const [urlInput, setUrlInput] = useState("");
-  const [oneLinerInput, setOneLinerInput] = useState("");
-  const [moodSelection, setMoodSelection] = useState<string[]>([]);
-  const [submitting, setSubmitting] = useState(false);
 
-  const fetchFeed = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set("tab", tab);
-      if (selectedMood) params.set("mood", selectedMood);
-      if (query.trim()) params.set("q", query.trim());
-      const res = await fetch(`/api/discover/feed?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to load feed");
-      setEntries(data.entries ?? []);
-    } catch (err: any) {
-      setError(err.message ?? "Failed to load discover feed");
-    } finally {
-      setLoading(false);
-    }
-  }, [tab, selectedMood, query]);
-
-  useEffect(() => {
-    if (authenticated) void fetchFeed();
-  }, [authenticated, tab, selectedMood]);
-
-  const handleVote = async (id: string) => {
-    await fetch("/api/discover/vote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ submissionId: id }) });
-    void fetchFeed();
-  };
-  const handleSave = async (id: string) => {
-    await fetch("/api/discover/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ submissionId: id }) });
-    void fetchFeed();
-  };
-  const handleOpen = async (id: string) => {
-    await fetch("/api/discover/open", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ submissionId: id }) });
-  };
-  const handleReport = async (id: string) => {
-    await fetch("/api/discover/report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ submissionId: id, reason: "spam" }) });
-  };
-
-  const toggleMood = (mood: string) => {
-    setMoodSelection((prev) =>
-      prev.includes(mood) ? prev.filter((m) => m !== mood) : prev.length >= 3 ? prev : [...prev, mood]
-    );
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/discover/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlInput, oneLiner: oneLinerInput, moodTags: moodSelection }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Submission failed");
-      setUrlInput("");
-      setOneLinerInput("");
-      setMoodSelection([]);
-      setShowSubmit(false);
-      void fetchFeed();
-    } catch (err: any) {
-      setError(err.message ?? "Failed to submit");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <section>
-      {/* Section header */}
-      <div className="mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <div className="font-mono text-xs text-textdim tracking-[0.5em] uppercase mb-3">Community</div>
-          <h2 className="font-display tracking-wider leading-none" style={{ fontSize: "clamp(40px, 6vw, 72px)", color: DISCOVER_COLOR }}>
-            DISCOVER
-          </h2>
-          <p className="font-body italic mt-2" style={{ fontSize: "clamp(14px, 1.5vw, 17px)", color: "rgba(255,255,255,0.35)" }}>
-            Community-curated playlists for any mood.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowSubmit((s) => !s)}
-          className="shrink-0 font-mono text-xs tracking-[0.18em] px-4 py-2.5 border transition-colors"
-          style={{ borderColor: showSubmit ? `${DISCOVER_COLOR}80` : `${DISCOVER_COLOR}40`, color: DISCOVER_COLOR, background: showSubmit ? `${DISCOVER_COLOR}10` : "transparent" }}
-        >
-          {showSubmit ? "✕ CLOSE" : "+ SUBMIT PLAYLIST"}
-        </button>
-      </div>
-
-      {/* Submit form */}
-      {showSubmit && (
-        <div className="mb-8 border border-border bg-bg2 p-6" style={{ borderColor: `${DISCOVER_COLOR}25` }}>
-          <h3 className="font-display text-2xl leading-none mb-1" style={{ color: DISCOVER_COLOR }}>Submit a Playlist</h3>
-          <p className="font-mono text-xs text-textdim mb-5">Add a Spotify playlist URL with up to 3 moods.</p>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <div>
-                <label className="font-mono text-xs text-textdim tracking-[0.15em] uppercase">Spotify URL</label>
-                <input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} required className="mt-1.5 w-full px-3 py-2 bg-bg border border-border font-mono text-xs text-textmid placeholder:text-textdim focus:outline-none focus:border-accent/40" placeholder="https://open.spotify.com/playlist/..." />
-              </div>
-              <div>
-                <label className="font-mono text-xs text-textdim tracking-[0.15em] uppercase">One-liner (20–100 chars)</label>
-                <textarea value={oneLinerInput} onChange={(e) => setOneLinerInput(e.target.value)} minLength={20} maxLength={100} required rows={3} className="mt-1.5 w-full px-3 py-2 bg-bg border border-border font-body italic text-sm text-textmid placeholder:text-textdim focus:outline-none focus:border-accent/40" placeholder="Late-night synth wave for long city drives." />
-              </div>
-            </div>
-            <div>
-              <label className="font-mono text-xs text-textdim tracking-[0.15em] uppercase">Moods (max 3)</label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {MOOD_OPTIONS.map((mood) => {
-                  const selected = moodSelection.includes(mood);
-                  return (
-                    <button key={mood} type="button" onClick={() => toggleMood(mood)} className="px-2.5 py-1.5 border font-mono text-xs tracking-[0.13em] uppercase transition-colors" style={{ borderColor: selected ? DISCOVER_COLOR : "#252530", color: selected ? DISCOVER_COLOR : "#666", background: selected ? `${DISCOVER_COLOR}10` : "transparent" }}>
-                      {mood.replace("-", " ")}
-                    </button>
-                  );
-                })}
-              </div>
-              <button type="submit" disabled={submitting || moodSelection.length < 1} className="mt-4 w-full px-3 py-2.5 border font-mono text-xs tracking-[0.2em] disabled:opacity-40 transition-colors" style={{ borderColor: DISCOVER_COLOR, color: DISCOVER_COLOR }}>
-                {submitting ? "SUBMITTING..." : "SUBMIT"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
-        {/* Tabs */}
-        <div className="flex items-center gap-0 border-b border-border shrink-0">
-          {(["trending", "new"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)} className="px-4 py-2 border-b-2 -mb-px font-mono text-xs tracking-[0.2em] uppercase transition-colors" style={{ borderBottomColor: tab === t ? DISCOVER_COLOR : "transparent", color: tab === t ? DISCOVER_COLOR : "#555" }}>
-              {t}
-            </button>
-          ))}
-        </div>
-
-        {/* Mood pills */}
-        <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => setSelectedMood("")} className="px-3 py-1.5 border font-mono text-xs tracking-[0.14em] uppercase transition-colors" style={{ borderColor: !selectedMood ? `${DISCOVER_COLOR}70` : "#252530", color: !selectedMood ? DISCOVER_COLOR : "#555" }}>
-            All
-          </button>
-          {MOOD_OPTIONS.map((mood) => (
-            <button key={mood} onClick={() => setSelectedMood(mood)} className="px-3 py-1.5 border font-mono text-xs tracking-[0.14em] uppercase transition-colors" style={{ borderColor: selectedMood === mood ? `${DISCOVER_COLOR}70` : "#252530", color: selectedMood === mood ? DISCOVER_COLOR : "#555" }}>
-              {mood.replace("-", " ")}
-            </button>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="flex items-center gap-2 md:ml-auto">
-          <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void fetchFeed()} placeholder="Search playlists..." className="px-3 py-1.5 bg-bg2 border border-border font-mono text-xs text-textmid placeholder:text-textdim focus:outline-none focus:border-accent/40" />
-          <button onClick={() => void fetchFeed()} className="px-3 py-1.5 border font-mono text-xs tracking-[0.18em] transition-colors" style={{ borderColor: `${DISCOVER_COLOR}50`, color: DISCOVER_COLOR }}>
-            GO
-          </button>
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && <div className="border border-accent2/40 bg-accent2/10 p-3 font-mono text-xs text-accent2 mb-4">{error}</div>}
-
-      {/* Feed */}
-      {loading ? (
-        <div className="py-16 text-center font-mono text-xs text-textdim tracking-[0.25em] animate-pulse">LOADING FEED...</div>
-      ) : entries.length === 0 ? (
-        <div className="py-16 text-center border border-border bg-bg2">
-          <p className="font-display text-2xl text-textdim mb-2">NO PLAYLISTS YET</p>
-          <p className="font-body italic text-textmid text-sm">Submit the first playlist for this mood.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {entries.map((entry) => (
-            <article key={entry.id} className="border border-border bg-bg2 p-4 md:p-5 transition-colors" style={{ borderColor: "rgba(37,37,48,0.8)" }}>
-              <div className="flex items-start gap-4">
-                <img
-                  src={entry.playlist.image ?? "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228"}
-                  alt={entry.playlist.title}
-                  className="w-16 h-16 md:w-20 md:h-20 object-cover bg-bg3 shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-2 mb-1">
-                    <h3 className="font-display text-2xl md:text-3xl leading-none truncate">{entry.playlist.title}</h3>
-                    <span className="font-mono text-xs text-textdim tracking-[0.15em]">{entry.playlist.trackCount} tracks</span>
-                  </div>
-                  <p className="font-body italic text-sm text-textmid mb-1">"{entry.oneLiner}"</p>
-                  <p className="font-mono text-xs text-textdim mb-3">
-                    by {entry.playlist.ownerName} · shared by {entry.submitter.name}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {entry.moodTags.map((tag) => (
-                      <span key={tag} className="px-2 py-1 border border-border font-mono text-xs tracking-[0.12em] uppercase text-textdim">
-                        {tag.replace("-", " ")}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <a href={entry.playlist.url} target="_blank" rel="noreferrer" onClick={() => void handleOpen(entry.id)} className="px-3 py-1.5 border font-mono text-xs tracking-[0.14em] transition-colors" style={{ borderColor: `${DISCOVER_COLOR}50`, color: DISCOVER_COLOR }}>
-                      OPEN IN SPOTIFY ↗
-                    </a>
-                    <button onClick={() => void handleSave(entry.id)} className="px-3 py-1.5 border border-border font-mono text-xs text-textmid tracking-[0.14em] hover:border-border/80 transition-colors">
-                      {entry.hasSaved ? "SAVED" : "SAVE"} ({entry.saves})
-                    </button>
-                    <button onClick={() => void handleVote(entry.id)} className="px-3 py-1.5 border border-border font-mono text-xs text-textmid tracking-[0.14em] hover:border-border/80 transition-colors">
-                      {entry.hasVoted ? "LIKED" : "LIKE"} ({entry.upvotes})
-                    </button>
-                    <button onClick={() => void handleReport(entry.id)} className="px-3 py-1.5 border border-border font-mono text-xs text-textdim tracking-[0.14em] hover:border-border/80 transition-colors">
-                      REPORT
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}

@@ -30,32 +30,49 @@ export async function POST(req: NextRequest) {
     spotifyPlaylistId = playlist?.spotify_playlist_id ?? null;
   }
 
-  // Save to our DB (idempotent)
-  const { error } = await supabaseAdmin.from("playlist_saves").upsert(
-    { user_id: userId, submission_id: submissionId },
-    { onConflict: "user_id,submission_id" }
-  );
-
-  if (error) {
-    return NextResponse.json({ error: "Failed to save" }, { status: 500 });
-  }
-
-  // Best-effort: follow the playlist on Spotify so it appears in the user's library.
-  // Requires playlist-modify-private scope (private follow — not public on profile).
-  // Silently skips if the token lacks the scope or the call fails.
+  const remove = Boolean(body.remove);
   const accessToken = (session as any)?.accessToken as string | undefined;
-  if (accessToken && spotifyPlaylistId) {
-    try {
-      await fetch(`https://api.spotify.com/v1/playlists/${spotifyPlaylistId}/followers`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ public: false }),
-      });
-    } catch {
-      // Non-blocking — DB save already succeeded
+
+  if (remove) {
+    const { error } = await supabaseAdmin
+      .from("playlist_saves")
+      .delete()
+      .eq("user_id", userId)
+      .eq("submission_id", submissionId);
+    if (error) return NextResponse.json({ error: "Failed to unsave" }, { status: 500 });
+
+    // Best-effort: unfollow the playlist on Spotify
+    if (accessToken && spotifyPlaylistId) {
+      try {
+        await fetch(`https://api.spotify.com/v1/playlists/${spotifyPlaylistId}/followers`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+      } catch {
+        // Non-blocking
+      }
+    }
+  } else {
+    const { error } = await supabaseAdmin.from("playlist_saves").upsert(
+      { user_id: userId, submission_id: submissionId },
+      { onConflict: "user_id,submission_id" }
+    );
+    if (error) return NextResponse.json({ error: "Failed to save" }, { status: 500 });
+
+    // Best-effort: follow the playlist on Spotify so it appears in the user's library.
+    if (accessToken && spotifyPlaylistId) {
+      try {
+        await fetch(`https://api.spotify.com/v1/playlists/${spotifyPlaylistId}/followers`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ public: false }),
+        });
+      } catch {
+        // Non-blocking
+      }
     }
   }
 
