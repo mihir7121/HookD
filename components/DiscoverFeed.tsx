@@ -23,14 +23,19 @@ type DiscoverEntry = {
     ownerName: string;
     trackCount: number;
   };
-  submitter: { name: string; image: string | null };
+  submitter: { name: string; image: string | null } | null;
 };
 
-export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
+const PREVIEW_LIMIT = 15;
+const PAGE_SIZE = 50;
+
+export function DiscoverFeed({ authenticated, previewMode = false }: { authenticated: boolean; previewMode?: boolean }) {
   const [tab, setTab] = useState<"trending" | "new">("trending");
   const [selectedMood, setSelectedMood] = useState("");
   const [query, setQuery] = useState("");
   const [entries, setEntries] = useState<DiscoverEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSubmit, setShowSubmit] = useState(false);
@@ -42,29 +47,41 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
   const [moodMenuSearch, setMoodMenuSearch] = useState("");
   const moodMenuRef = useRef<HTMLDivElement>(null);
 
-  const fetchFeed = useCallback(async () => {
+  const limit = previewMode ? PREVIEW_LIMIT : PAGE_SIZE;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const fetchFeed = useCallback(async (targetPage = page) => {
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams();
       params.set("tab", tab);
+      params.set("limit", String(limit));
+      params.set("offset", String(previewMode ? 0 : targetPage * PAGE_SIZE));
       if (selectedMood) params.set("mood", selectedMood);
       if (query.trim()) params.set("q", query.trim());
       const res = await fetch(`/api/discover/feed?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to load feed");
       setEntries(data.entries ?? []);
+      setTotal(data.total ?? 0);
     } catch (err: any) {
       setError(err.message ?? "Failed to load discover feed");
     } finally {
       setLoading(false);
     }
-  }, [tab, selectedMood, query]);
+  }, [tab, selectedMood, query, page, limit, previewMode]);
 
   // Always fetch — no auth gate
   useEffect(() => {
-    void fetchFeed();
+    setPage(0);
+    void fetchFeed(0);
   }, [tab, selectedMood]);
+
+  const goToPage = (p: number) => {
+    setPage(p);
+    void fetchFeed(p);
+  };
 
   const handleVote = async (id: string, currentlyVoted: boolean) => {
     if (!authenticated) { void signIn("spotify"); return; }
@@ -121,27 +138,33 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
           </p>
         </div>
 
-        {authenticated ? (
+        <div className="flex items-center gap-2 shrink-0">
+          {previewMode && (
+            <a
+              href="/discover"
+              className="font-mono text-xs tracking-[0.18em] px-4 py-2.5 border transition-colors flex items-center gap-2"
+              style={{ borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
+            >
+              {/* grid icon */}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+              </svg>
+              VIEW ALL
+            </a>
+          )}
           <button
             onClick={() => setShowSubmit((s) => !s)}
-            className="shrink-0 font-mono text-xs tracking-[0.18em] px-4 py-2.5 border transition-colors"
+            className="font-mono text-xs tracking-[0.18em] px-4 py-2.5 border transition-colors"
             style={{ borderColor: showSubmit ? `${COLOR}80` : `${COLOR}40`, color: COLOR, background: showSubmit ? `${COLOR}10` : "transparent" }}
           >
             {showSubmit ? "✕ CLOSE" : "+ SUBMIT PLAYLIST"}
           </button>
-        ) : (
-          <button
-            onClick={() => void signIn("spotify")}
-            className="shrink-0 font-mono text-xs tracking-[0.18em] px-4 py-2.5 border transition-colors"
-            style={{ borderColor: `${COLOR}30`, color: `${COLOR}70` }}
-          >
-            CONNECT TO SUBMIT ↗
-          </button>
-        )}
+        </div>
       </div>
 
-      {/* Submit form (auth only) */}
-      {authenticated && showSubmit && (
+      {/* Submit form */}
+      {showSubmit && (
         <div className="mb-8 border border-border bg-bg2 p-6" style={{ borderColor: `${COLOR}25` }}>
           <h3 className="font-display text-2xl leading-none mb-1" style={{ color: COLOR }}>Submit a Playlist</h3>
           <p className="font-mono text-xs text-textdim mb-5">Add a Spotify playlist URL with up to 3 moods.</p>
@@ -157,13 +180,13 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
               </div>
             </div>
             <div>
-              <label className="font-mono text-xs text-textdim tracking-[0.15em] uppercase">Moods (max 3)</label>
+              <label className="font-mono text-xs text-textdim tracking-[0.15em] uppercase">Moods (max 7)</label>
               <div className="mt-2">
                 <TagSelect
                   value={moodSelection}
                   onChange={setMoodSelection}
                   suggestions={MOOD_OPTIONS}
-                  max={3}
+                  max={7}
                   color={COLOR}
                 />
               </div>
@@ -329,7 +352,7 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
       ) : (
         <div className="space-y-3">
           {entries.map((entry) => (
-            <article key={entry.id} className="border border-border bg-bg2 p-4 md:p-5 transition-colors" style={{ borderColor: "rgba(37,37,48,0.8)" }}>
+            <article key={entry.id} className="border border-border bg-bg2 p-4 md:p-5 transition-colors" style={{ borderColor: "rgba(37,37,48,0.8)" }} >
               <div className="flex items-start gap-4">
                 <img
                   src={entry.playlist.image ?? "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228"}
@@ -343,14 +366,19 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
                   </div>
                   <p className="font-body italic text-sm text-textmid mb-1">"{entry.oneLiner}"</p>
                   <p className="font-mono text-xs text-textdim mb-3">
-                    by {entry.playlist.ownerName} · shared by {entry.submitter.name}
+                    by {entry.playlist.ownerName}{entry.submitter ? ` · shared by ${entry.submitter.name}` : ""}
                   </p>
                   <div className="flex flex-wrap gap-1.5 mb-4">
-                    {entry.moodTags.map((tag) => (
+                    {entry.moodTags.slice(0, 3).map((tag) => (
                       <span key={tag} className="px-2 py-1 border border-border font-mono text-xs tracking-[0.12em] uppercase text-textdim">
-                        {tag.replace("-", " ")}
+                        {tag.replace(/-/g, " ")}
                       </span>
                     ))}
+                    {entry.moodTags.length > 3 && (
+                      <span className="px-2 py-1 border border-border font-mono text-xs tracking-[0.12em] text-textdim" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                        +{entry.moodTags.length - 3}
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <a
@@ -404,6 +432,45 @@ export function DiscoverFeed({ authenticated }: { authenticated: boolean }) {
               </div>
             </article>
           ))}
+        </div>
+      )}
+
+      {/* Preview mode: view-all link */}
+      {previewMode && total > PREVIEW_LIMIT && (
+        <div className="mt-6 flex justify-center">
+          <a
+            href="/discover"
+            className="group flex items-center gap-3 px-8 py-3 border font-mono text-xs tracking-[0.2em] uppercase transition-colors"
+            style={{ borderColor: `${COLOR}40`, color: COLOR }}
+          >
+            View all {total} playlists
+            <span className="transition-transform duration-300 group-hover:translate-x-1" style={{ color: `${COLOR}60` }}>→</span>
+          </a>
+        </div>
+      )}
+
+      {/* Full mode: pagination */}
+      {!previewMode && totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-center gap-3">
+          <button
+            disabled={page === 0}
+            onClick={() => goToPage(page - 1)}
+            className="px-4 py-2 border font-mono text-xs tracking-[0.18em] disabled:opacity-25 transition-colors"
+            style={{ borderColor: `${COLOR}40`, color: COLOR }}
+          >
+            ← PREV
+          </button>
+          <span className="font-mono text-xs tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.3)" }}>
+            {page + 1} / {totalPages}
+          </span>
+          <button
+            disabled={page >= totalPages - 1}
+            onClick={() => goToPage(page + 1)}
+            className="px-4 py-2 border font-mono text-xs tracking-[0.18em] disabled:opacity-25 transition-colors"
+            style={{ borderColor: `${COLOR}40`, color: COLOR }}
+          >
+            NEXT →
+          </button>
         </div>
       )}
     </section>

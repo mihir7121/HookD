@@ -38,13 +38,15 @@ export async function GET(req: NextRequest) {
   const tab = isDiscoverTab(tabParam) ? tabParam : "trending";
   const mood = searchParams.get("mood")?.trim().toLowerCase() ?? "";
   const q = searchParams.get("q")?.trim().toLowerCase() ?? "";
+  const limit = Math.min(Math.max(Number(searchParams.get("limit") ?? 500), 1), 500);
+  const offset = Math.max(Number(searchParams.get("offset") ?? 0), 0);
 
   let submissionsQuery = supabaseAdmin
     .from("playlist_submissions")
     .select("id, playlist_id, user_id, one_liner, mood_tags, open_count, created_at, status")
     .eq("status", "active")
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(500);
 
   if (mood) {
     submissionsQuery = submissionsQuery.contains("mood_tags", [mood]);
@@ -61,7 +63,7 @@ export async function GET(req: NextRequest) {
   }
 
   const playlistIds = Array.from(new Set(typedSubmissions.map((s) => s.playlist_id)));
-  const userIds = Array.from(new Set(typedSubmissions.map((s) => s.user_id)));
+  const userIds = Array.from(new Set(typedSubmissions.map((s) => s.user_id).filter(Boolean)));
   const submissionIds = typedSubmissions.map((s) => s.id);
 
   const [playlistRes, usersRes, votesRes, savesRes, myVotesRes, mySavesRes] = await Promise.all([
@@ -139,10 +141,9 @@ export async function GET(req: NextRequest) {
           ownerName: playlist.owner_name,
           trackCount: playlist.track_count,
         },
-        submitter: {
-          name: submitter?.name ?? "Anonymous",
-          image: submitter?.image ?? null,
-        },
+        submitter: s.user_id && submitter
+          ? { name: submitter.name ?? "Anonymous", image: submitter.image ?? null }
+          : null,
       };
     })
     .filter(Boolean) as Array<any>;
@@ -164,5 +165,8 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ entries });
+  const total = entries.length;
+  entries = entries.slice(offset, offset + limit);
+
+  return NextResponse.json({ entries, total });
 }

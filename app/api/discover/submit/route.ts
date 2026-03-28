@@ -6,12 +6,10 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   const { session, userId, spotifyId } = await getAuthedUser();
-  if (!session || !spotifyId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
-  let resolvedUserId = userId;
-  if (!resolvedUserId) {
+  // Resolve user if authenticated
+  let resolvedUserId: string | null = userId;
+  if (session && spotifyId && !resolvedUserId) {
     const { data: upserted, error: upsertErr } = await supabaseAdmin
       .from("users")
       .upsert(
@@ -41,8 +39,8 @@ export async function POST(req: NextRequest) {
   if (oneLiner.length < 20 || oneLiner.length > 100) {
     return NextResponse.json({ error: "One-liner must be between 20 and 100 characters" }, { status: 400 });
   }
-  if (moodTags.length < 1 || moodTags.length > 3) {
-    return NextResponse.json({ error: "Select between 1 and 3 moods" }, { status: 400 });
+  if (moodTags.length < 1 || moodTags.length > 7) {
+    return NextResponse.json({ error: "Select between 1 and 7 moods" }, { status: 400 });
   }
 
   const playlistId = parseSpotifyPlaylistId(url);
@@ -52,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   let meta;
   try {
-    meta = await fetchSpotifyPlaylistMeta(playlistId, (session as any).accessToken as string | undefined);
+    meta = await fetchSpotifyPlaylistMeta(playlistId, (session as any)?.accessToken as string | undefined);
   } catch {
     return NextResponse.json(
       { error: "Could not fetch playlist metadata. Check visibility and URL." },
@@ -77,7 +75,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (playlistErr || !playlist) {
-    return NextResponse.json({ error: "Failed to save playlist" }, { status: 500 });
+    console.error("[submit] playlist upsert error:", playlistErr);
+    return NextResponse.json({ error: "Failed to save playlist", detail: playlistErr?.message }, { status: 500 });
   }
 
   const { data: existing } = await supabaseAdmin
@@ -91,20 +90,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Playlist already submitted" }, { status: 409 });
   }
 
+  const insertPayload: Record<string, unknown> = {
+    playlist_id: playlist.id,
+    one_liner: oneLiner,
+    mood_tags: moodTags,
+    status: "active",
+  };
+  // Only set user_id when we have one — avoids NOT NULL violation for anonymous submissions
+  if (resolvedUserId) insertPayload.user_id = resolvedUserId;
+
   const { data: submission, error: submissionErr } = await supabaseAdmin
     .from("playlist_submissions")
-    .insert({
-      user_id: resolvedUserId,
-      playlist_id: playlist.id,
-      one_liner: oneLiner,
-      mood_tags: moodTags,
-      status: "active",
-    })
+    .insert(insertPayload)
     .select("id, one_liner, mood_tags, created_at")
     .single();
 
   if (submissionErr || !submission) {
-    return NextResponse.json({ error: "Failed to create submission" }, { status: 500 });
+    console.error("[submit] submission insert error:", submissionErr);
+    return NextResponse.json({ error: "Failed to create submission", detail: submissionErr?.message }, { status: 500 });
   }
 
   return NextResponse.json({
@@ -127,10 +130,9 @@ export async function POST(req: NextRequest) {
         ownerName: playlist.owner_name,
         trackCount: playlist.track_count,
       },
-      submitter: {
-        name: session.user?.name ?? "Anonymous",
-        image: session.user?.image ?? null,
-      },
+      submitter: session?.user
+        ? { name: session.user.name ?? "Anonymous", image: session.user.image ?? null }
+        : null,
     },
   });
 }

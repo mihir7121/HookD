@@ -55,5 +55,5 @@ export function normalizeMoodTags(tags: string[]): string[] {
     .map((tag) => normalizeTag(tag))
     .filter((tag) => tag.length >= 2);
 
-  return Array.from(new Set(cleaned)).slice(0, 3);
+  return Array.from(new Set(cleaned)).slice(0, 7);
 }

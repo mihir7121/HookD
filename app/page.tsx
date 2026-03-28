@@ -45,6 +45,24 @@ export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [hoveredGame, setHoveredGame] = useState<string | null>(null);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistStatus, setWaitlistStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  const handleWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWaitlistStatus("loading");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: waitlistEmail }),
+      });
+      if (!res.ok) throw new Error();
+      setWaitlistStatus("success");
+    } catch {
+      setWaitlistStatus("error");
+    }
+  };
 
   useEffect(() => {
     if (session) router.push("/game");
@@ -135,13 +153,6 @@ export default function Home() {
             <span className="font-display text-lg tracking-[0.22em] text-accent">HOOKD</span>
           </div>
           <div className="flex items-center gap-4 md:gap-7">
-            <button
-              onClick={() => router.push("/about")}
-              className="nav-connect font-mono text-xs tracking-[0.18em] text-white/30 flex items-center gap-1.5"
-            >
-              <span>CREATED BY</span>
-              <span className="text-white/15">↗</span>
-            </button>
             {status !== "loading" && (
               <button
                 onClick={() => signIn("spotify")}
@@ -218,55 +229,75 @@ export default function Home() {
               Your Spotify history. Your music knowledge. Find out what you actually know.
             </p>
 
-            <div className="fu4 mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              {status === "loading" ? (
-                <div className="font-mono text-xs tracking-widest animate-pulse" style={{ color: "rgba(255,255,255,0.2)" }}>
-                  LOADING...
+            <div className="fu4 mt-10 w-full max-w-md flex flex-col items-center gap-5">
+              {/* Waitlist form */}
+              {waitlistStatus === "success" ? (
+                <div className="w-full py-4 px-6 border font-mono text-xs tracking-[0.2em] text-center" style={{ borderColor: "rgba(200,255,0,0.3)", color: "#c8ff00", background: "rgba(200,255,0,0.04)" }}>
+                  YOU'RE ON THE LIST — WE'LL BE IN TOUCH
                 </div>
               ) : (
+                <form onSubmit={handleWaitlist} className="w-full flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    required
+                    value={waitlistEmail}
+                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="flex-1 px-4 py-3 bg-transparent font-mono text-xs tracking-[0.15em] placeholder:text-white/20 focus:outline-none"
+                    style={{ border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.8)" }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={waitlistStatus === "loading"}
+                    className="cta-glow px-6 py-3 font-mono text-xs tracking-[0.2em] uppercase disabled:opacity-50 shrink-0"
+                    style={{
+                      border: "1px solid rgba(200,255,0,0.28)",
+                      background: "rgba(200,255,0,0.04)",
+                      color: "#c8ff00",
+                      backdropFilter: "blur(12px)",
+                      boxShadow: "0 0 30px rgba(200,255,0,0.09)",
+                    }}
+                  >
+                    {waitlistStatus === "loading" ? "..." : "JOIN WAITLIST →"}
+                  </button>
+                </form>
+              )}
+              {waitlistStatus === "error" && (
+                <p className="font-mono text-xs tracking-[0.15em]" style={{ color: "rgba(255,80,80,0.7)" }}>
+                  Something went wrong — try again
+                </p>
+              )}
+
+              {/* Divider */}
+              <div className="flex items-center gap-4 w-full">
+                <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                <span className="font-mono text-xs tracking-[0.3em]" style={{ color: "rgba(255,255,255,0.18)" }}>OR</span>
+                <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+              </div>
+
+              {/* Secondary row: sign in + browse */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
                 <button
                   onClick={() => signIn("spotify")}
-                  className="cta-glow group flex items-center gap-4 px-10 py-4 font-mono text-xs tracking-[0.2em] uppercase text-accent"
-                  style={{
-                    border: "1px solid rgba(200,255,0,0.28)",
-                    background: "rgba(200,255,0,0.04)",
-                    backdropFilter: "blur(12px)",
-                    boxShadow: "0 0 30px rgba(200,255,0,0.09), inset 0 0 30px rgba(200,255,0,0.02)",
-                  }}
+                  className="group flex items-center justify-center gap-3 px-6 py-2.5 font-mono text-xs tracking-[0.18em] uppercase w-full sm:w-auto transition-colors"
+                  style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
                 >
                   <SpotifyIcon />
-                  Connect with Spotify
-                  <span
-                    className="transition-transform duration-300 group-hover:translate-x-1"
-                    style={{ color: "rgba(200,255,0,0.4)" }}
-                  >
-                    →
-                  </span>
+                  Already approved? Sign in
                 </button>
-              )}
-              <a
-                href="#discover"
-                className="cta-glow group flex items-center gap-4 px-10 py-4 font-mono text-xs tracking-[0.2em] uppercase"
-                style={{
-                  border: "1px solid rgba(0,207,255,0.28)",
-                  background: "rgba(0,207,255,0.04)",
-                  backdropFilter: "blur(12px)",
-                  boxShadow: "0 0 30px rgba(0,207,255,0.09), inset 0 0 30px rgba(0,207,255,0.02)",
-                  color: "#00cfff",
-                }}
-              >
-                Browse community playlists
-                <span
-                  className="transition-transform duration-300 group-hover:translate-y-1"
-                  style={{ color: "rgba(0,207,255,0.4)" }}
+                <a
+                  href="/discover"
+                  className="group flex items-center justify-center gap-3 px-6 py-2.5 font-mono text-xs tracking-[0.18em] uppercase w-full sm:w-auto transition-colors"
+                  style={{ border: "1px solid rgba(0,207,255,0.2)", color: "rgba(0,207,255,0.6)" }}
                 >
-                  ↓
-                </span>
-              </a>
+                  Browse playlists
+                  <span className="transition-transform duration-300 group-hover:translate-x-0.5">↗</span>
+                </a>
+              </div>
             </div>
 
             <p className="fu5 mt-5 font-mono text-xs tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.18)" }}>
-              Uses your Spotify listening history · No data stored without consent
+              Discover is free for everyone · Games require Spotify approval
             </p>
           </div>
 
@@ -295,7 +326,7 @@ export default function Home() {
           style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
         >
           <div className="pt-24 max-w-7xl mx-auto">
-            <DiscoverFeed authenticated={!!session} />
+            <DiscoverFeed authenticated={!!session} previewMode />
           </div>
         </section>
 
@@ -489,47 +520,55 @@ export default function Home() {
             <p className="font-body italic text-xl" style={{ color: "rgba(255,255,255,0.3)" }}>
               Your listening history awaits.
             </p>
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              {status !== "loading" && (
+            <div className="w-full max-w-md flex flex-col items-center gap-5">
+              {waitlistStatus === "success" ? (
+                <div className="w-full py-4 px-6 border font-mono text-xs tracking-[0.2em] text-center" style={{ borderColor: "rgba(200,255,0,0.3)", color: "#c8ff00", background: "rgba(200,255,0,0.04)" }}>
+                  YOU'RE ON THE LIST — WE'LL BE IN TOUCH
+                </div>
+              ) : (
+                <form onSubmit={handleWaitlist} className="w-full flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    required
+                    value={waitlistEmail}
+                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="flex-1 px-4 py-3 bg-transparent font-mono text-xs tracking-[0.15em] placeholder:text-white/20 focus:outline-none"
+                    style={{ border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.8)" }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={waitlistStatus === "loading"}
+                    className="cta-glow px-6 py-3 font-mono text-xs tracking-[0.2em] uppercase disabled:opacity-50 shrink-0"
+                    style={{
+                      border: "1px solid rgba(200,255,0,0.28)",
+                      background: "rgba(200,255,0,0.04)",
+                      color: "#c8ff00",
+                      backdropFilter: "blur(12px)",
+                      boxShadow: "0 0 30px rgba(200,255,0,0.09)",
+                    }}
+                  >
+                    {waitlistStatus === "loading" ? "..." : "JOIN WAITLIST →"}
+                  </button>
+                </form>
+              )}
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
                 <button
                   onClick={() => signIn("spotify")}
-                  className="cta-glow group flex items-center gap-4 px-12 py-5 font-mono text-sm tracking-[0.2em] uppercase text-accent"
-                  style={{
-                    border: "1px solid rgba(200,255,0,0.28)",
-                    background: "rgba(200,255,0,0.04)",
-                    backdropFilter: "blur(12px)",
-                    boxShadow: "0 0 40px rgba(200,255,0,0.1), inset 0 0 30px rgba(200,255,0,0.02)",
-                  }}
+                  className="group flex items-center justify-center gap-3 px-6 py-2.5 font-mono text-xs tracking-[0.18em] uppercase w-full sm:w-auto transition-colors"
+                  style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.45)" }}
                 >
                   <SpotifyIcon />
-                  Connect with Spotify
-                  <span
-                    className="transition-transform duration-300 group-hover:translate-x-1"
-                    style={{ color: "rgba(200,255,0,0.4)" }}
-                  >
-                    →
-                  </span>
+                  Already approved? Sign in
                 </button>
-              )}
-              <a
-                href="#discover"
-                className="cta-glow group flex items-center gap-4 px-12 py-5 font-mono text-sm tracking-[0.2em] uppercase"
-                style={{
-                  border: "1px solid rgba(0,207,255,0.28)",
-                  background: "rgba(0,207,255,0.04)",
-                  backdropFilter: "blur(12px)",
-                  boxShadow: "0 0 40px rgba(0,207,255,0.1), inset 0 0 30px rgba(0,207,255,0.02)",
-                  color: "#00cfff",
-                }}
-              >
-                Browse community playlists
-                <span
-                  className="transition-transform duration-300 group-hover:translate-y-1"
-                  style={{ color: "rgba(0,207,255,0.4)" }}
+                <a
+                  href="/discover"
+                  className="group flex items-center justify-center gap-3 px-6 py-2.5 font-mono text-xs tracking-[0.18em] uppercase w-full sm:w-auto transition-colors"
+                  style={{ border: "1px solid rgba(0,207,255,0.2)", color: "rgba(0,207,255,0.6)" }}
                 >
-                  ↓
-                </span>
-              </a>
+                  Browse playlists ↗
+                </a>
+              </div>
             </div>
           </div>
         </section>
@@ -550,6 +589,13 @@ export default function Home() {
             <span>Powered by Spotify Web API</span>
             <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
             <span>Your data stays yours</span>
+            <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+            <button
+              onClick={() => router.push("/about")}
+              className="hover:text-white transition-colors"
+            >
+              Created by ↗
+            </button>
           </div>
         </footer>
       </main>
