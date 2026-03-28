@@ -156,9 +156,6 @@ export default function GameLobby() {
             <button onClick={() => router.push("/leaderboard")} className="hidden sm:block font-mono text-xs text-textdim hover:text-accent tracking-[0.2em] uppercase transition-colors whitespace-nowrap">
               <span className="hidden md:inline">Leaderboard </span>↗
             </button>
-            <button onClick={() => router.push("/about")} className="hidden sm:block font-mono text-xs text-textdim hover:text-white tracking-[0.2em] uppercase transition-colors whitespace-nowrap">
-              <span className="hidden md:inline">Credits </span>↗
-            </button>
             <div className="w-px h-5 bg-border hidden sm:block" />
 
             <div className="flex items-center gap-2 md:gap-3">
@@ -233,8 +230,26 @@ export default function GameLobby() {
           <div className="mt-24 mb-12" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
 
           {/* Discover feed */}
-          <DiscoverFeed authenticated={status === "authenticated"} />
+          <DiscoverFeed authenticated={status === "authenticated"} previewMode />
         </div>
+
+        {/* Footer */}
+        <footer
+          className="relative z-10 px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 max-w-7xl mx-auto w-full"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-1 rounded-full bg-accent opacity-60" />
+            <span className="font-display text-sm tracking-[0.2em] text-accent opacity-60">HOOKD</span>
+          </div>
+          <div className="flex items-center gap-6 font-mono text-xs tracking-[0.18em]" style={{ color: "rgba(255,255,255,0.18)" }}>
+            <span>Powered by Spotify Web API</span>
+            <span style={{ color: "rgba(255,255,255,0.1)" }}>·</span>
+            <button onClick={() => router.push("/about")} className="hover:text-white transition-colors">
+              Created by ↗
+            </button>
+          </div>
+        </footer>
 
         {/* Bottom gradient fade */}
         <div className="fixed bottom-0 left-0 right-0 h-32 pointer-events-none" style={{ background: "linear-gradient(to top, rgba(8,8,10,1) 0%, transparent 100%)", zIndex: 5 }} />
